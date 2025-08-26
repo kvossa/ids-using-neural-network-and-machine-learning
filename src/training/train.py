@@ -15,7 +15,7 @@
 import yaml
 import tensorflow as tf
 import numpy as np
-from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.callbacks import EarlyStopping, ModelCheckpoint
 from sklearn.model_selection import train_test_split
 from ..model.model import IDSModelFactory
 from ..utils.logger import IDSLogger
@@ -65,7 +65,7 @@ class IDSTrainer:
 
         callbacks = [
             EarlyStopping(patience=5, monitor='val_loss'),
-            ModelCheckpoint('models/best_model.h5', save_best_only=True)
+            ModelCheckpoint('./models/ids.h5', save_best_only=True)
         ]
 
         self.history = self.model.fit(

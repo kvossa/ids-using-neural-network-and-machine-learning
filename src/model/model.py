@@ -1,6 +1,6 @@
-from tensorflow.keras.models import Model, Sequential
-from tensorflow.keras.layers import Input, Dense, LSTM, Dropout, Conv1D, MaxPooling1D, Flatten
-from tensorflow.keras.regularizers import l2
+from keras.models import Model, Sequential
+from keras.layers import Input, Dense, LSTM, Dropout, Conv1D, MaxPooling1D, Flatten, concatenate
+from keras.regularizers import l2
 
 # import mlflow
 # mlflow.tensorflow.log_model(model, "model")
@@ -13,44 +13,32 @@ from tensorflow.keras.regularizers import l2
 
 class IDSModelFactory:
 	@staticmethod
-	def create_mlp(input_dim, num_classes=1):
-		model = Sequential([
-			Dense(64, activation='relu', input_shape=(input_dim,), kernel_regularizer=l2(0.01)),
-			Dropout(0.3),
-			Dense(32, activation='relu'),
-			Dense(num_classes, activation='sigmoid')
-		])
-		return model
+	def create_model(input_dim_lstm=(100,10), input_dim_cnn=(100,10), input_dim_ae=20, num_classes=1):
+		lstm_input = Input(shape = input_dim_lstm, name="lstm_input")
+		lstm_out = LSTM(64, return_sequences = True)(lstm_input)
+		lstm_out = Dropout(0.2)(lstm_out)
+		lstm_out = LSTM(32)(lstm_out)
 
-	@staticmethod
-	def create_lstm(input_shape, num_classes=1):
-		model = Sequential([
-			LSTM(64, return_sequences=True, input_shape=input_shape),
-			Dropout(0.2),
-			LSTM(32),
-			Dense(num_classes, activation='sigmoid')
-		])
-		return model
-	
-	@staticmethod
-	def create_cnn(input_shape, num_classes=1):
-		model = Sequential([
-			Conv1D(64, kernel_size=3, activation='relu', input_shape=input_shape),
-			MaxPooling1D(pool_size=2),
-			Conv1D(32, kernel_size=3, activation='relu'),
-			Flatten(),
-			Dense(num_classes, activation='sigmoid')
-		])
-		return model
+		cnn_input = Input(shape=input_dim_cnn, name = "cnn_input")
+		cnn_out = Conv1D(64, kernel_size=3, activation='relu')(cnn_input)
+		cnn_out = MaxPooling1D(pool_size=2)(cnn_out)
+		cnn_out = Conv1D(32, kernel_size=3, activation='relu')(cnn_out)
+		cnn_out = Flatten()(cnn_out)
+		
+		ae_input = Input(shape=(input_dim_ae), name='ae_input')
+		encoded = Dense(32, activation='relu', name='encoded_features')(ae_input)
 
-	@staticmethod
-	def create_autoencoder(input_dim, encoding_dim=8):
-		input_layer =  Input(shape=(input_dim,))
-		encoder = Dense(encoding_dim, activation='relu')(input_layer)
-		decoder = Dense(input_dim, activation='sigmoid')(encoder)
-		model = Model(inputs=input_layer, outputs=decoder)
+		combined =  concatenate([lstm_out, cnn_out, encoded])
+
+		dense_out = Dense(64, activation='relu')(combined)
+		output = Dense(num_classes, activation='sigmoid', name='classification_output')(dense_out)
+
+		model = Model(
+			inputs=[lstm_input, cnn_input, ae_input],
+			outputs=output,
+		)
 		return model
 		
 if __name__ == "__main__":
-    model = IDSModelFactory.create_lstm(input_shape=(10, 15))  # 10 timesteps, 15 features
+    model = IDSModelFactory.create_model() 
     model.summary()

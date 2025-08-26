@@ -21,7 +21,8 @@ class DataNormalizer(BaseEstimator, TransformerMixin):
 		self.scaler_type = scaler_type
 		self.target_column = target_column
 		self.scaler = None
-		self.feature_columns = None
+		self.feature_columns_ = None
+		self.fitted = False
 
 	def fit(self, X, y = None):
 		numeric_cols = X.select_dtypes(include=np.number).columns
@@ -34,11 +35,17 @@ class DataNormalizer(BaseEstimator, TransformerMixin):
 		else:
 			self.scaler = StandardScaler()
 
-		self.scaler.fit(X[numeric_cols])
-		self.feature_columns = numeric_cols
+		if len(self.feature_columns_) > 0:
+				
+			self.scaler.fit(X[numeric_cols])
+			self.feature_columns = numeric_cols
+			self.fitted_ = True
 		return self
 	
 	def transform(self, X):
+		if not self.fitted_:
+			return X
+
 		X_scaled = X.copy()
 		
 		if self.scaler:
@@ -50,6 +57,23 @@ class DataNormalizer(BaseEstimator, TransformerMixin):
 			)
 
 		return X_scaled
+	
+class LabelBinarizer(BaseEstimator, TransformerMixin):
+
+    def __init__(self, target_col='label', benign_value='BENIGN'):
+        self.target_col = target_col
+        self.benign_value = benign_value
+        
+    def fit(self, X, y=None):
+        return self
+        
+    def transform(self, X):
+        X_transformed = X.copy()
+        if self.target_col in X.columns:
+            X_transformed[self.target_col] = (
+                X[self.target_col] != self.benign_value
+            ).astype(int)
+        return X_transformed
 	
 if __name__ == "__main__":
     df = pd.read_csv('data/processed/features.csv')

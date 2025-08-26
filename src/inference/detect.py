@@ -1,13 +1,13 @@
 import numpy as np
 import pandas as pd
-from tensorflow.keras.models import load_model
+from keras.models import load_model
 from scapy.all import sniff
 from ..utils.logger import IDSLogger
 from ..preprocessing import clean, features, normalize
 
 class IDSDetector:
 
-    def __init__(self, model_path='models/best_model.h5', threshold=0.9):
+    def __init__(self, model_path='./models/ids.h5', threshold=0.9):
         self.logger = IDSLogger()
         self.model = load_model(model_path)
         self.threshold = threshold
@@ -17,7 +17,7 @@ class IDSDetector:
     def _init_preprocessor(self):
         return {
             'clean': clean.DataCleaner(),
-            'features': features.FeatureEngineer(),
+            'features': features.FeatureHarmonizer(),
             'normalize': normalize.DataNormalizer()
         }
 
