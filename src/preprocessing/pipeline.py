@@ -1,17 +1,19 @@
 from load import DatasetProcessor
-from normalize import DataNormalizer
+from scaling import DataNormalizer, LabelBinarizer
 from pathlib import Path
+from encoding import CategoricalEncoder
 from split import split_and_store
 import json
 import glob
+from sklearn.pipeline import Pipeline
 
 def main():
 	datasets = {
-		# 'UNSW-NB15': Path('data/raw/UNSW-NB15/UNSW-NB15_training-set.csv'),
+		'UNSW-NB15': Path('data/raw/UNSW-NB15/UNSW-NB15_training-set.csv'),
 		'CIC-IDS2017': [Path(p) for p in glob.glob('data/raw/CIC-IDS2017/*.parquet')],
-		'CIC-IDS-Collection': Path('data/raw/cic-collection.parquet'),
+		# 'CIC-IDS-Collection': Path('data/raw/cic-collection.parquet'),
 		# 'CSE-CIC-IDS2018': [Path(p) for p in glob.glob('data/raw/CSE-CIC-IDS2018/*.csv')],
-		'CIC-IDS-2017-PCAP': [Path(p) for p in glob.glob('data/raw/Network Intrusion dataset(CIC-IDS-2017)/*.csv')],
+		# 'CIC-IDS-2017-PCAP': [Path(p) for p in glob.glob('data/raw/Network Intrusion dataset(CIC-IDS-2017)/*.csv')],
 	}
 
 	processed_data = {}

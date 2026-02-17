@@ -7,17 +7,18 @@ class DataCleaner(BaseEstimator, TransformerMixin):
 		self.drop_columns = drop_columns
 
 	def fit(self, X, y = None):
+		X_clean = X.drop(columns=self.drop_columns, errors='ignore').copy()
+		X_clean = X_clean.replace([np.inf, -np.inf], np.nan)
+		self.numeric_cols_ = X_clean.select_dtypes(include=np.number).columns
+		self.medians_ = X_clean[self.numeric_cols_].median()
 		return self
 	
 	def transform(self, X):
-		X_clean = X.drop(columns=self.drop_columns, errors='ignore')
+		X_clean = X.drop(columns=self.drop_columns, errors='ignore').copy()
 		X_clean = X_clean.drop_duplicates()
-
-		numeric_cols = X_clean.select_dtypes(include=np.number).columns
-		X_clean[numeric_cols] = X_clean[numeric_cols].fillna(X_clean[numeric_cols].median())
-
-		X_clean = X_clean.replace([np.inf, -np.inf], np.nan).fillna(0)
-
+		X_clean = X_clean.replace([np.inf, -np.inf], np.nan)
+		X_clean[self.numeric_cols_] = X_clean[self.numeric_cols_].fillna(self.medians_)
+		X_clean = X_clean.fillna(0)
 		return X_clean
 
 if __name__ == "__main__":
