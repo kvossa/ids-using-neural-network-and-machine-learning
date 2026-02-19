@@ -1,58 +1,64 @@
-from load import DatasetProcessor
-from scaling import DataNormalizer, LabelBinarizer
-from pathlib import Path
-from encoding import CategoricalEncoder
-from split import split_and_store
-import json
-import glob
+import pandas as pd
 from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.compose import ColumnTransformer
+from features_extraction import FeatureExtraction
+from features_selection import FeatureSelector
+from clean import DataCleaner
+from scaling import DataScaler, MultiClassLabelEncoder
+from encoding import CategoricalEncoder
+from model_factory import get_model
 
-def main():
-	datasets = {
-		'UNSW-NB15': Path('data/raw/UNSW-NB15/UNSW-NB15_training-set.csv'),
-		'CIC-IDS2017': [Path(p) for p in glob.glob('data/raw/CIC-IDS2017/*.parquet')],
-		# 'CIC-IDS-Collection': Path('data/raw/cic-collection.parquet'),
-		# 'CSE-CIC-IDS2018': [Path(p) for p in glob.glob('data/raw/CSE-CIC-IDS2018/*.csv')],
-		# 'CIC-IDS-2017-PCAP': [Path(p) for p in glob.glob('data/raw/Network Intrusion dataset(CIC-IDS-2017)/*.csv')],
-	}
+class IDSPipeline:
+	def __init__(self, use_feature_selection=True, k_features=30, random_state=42, dataset="CIC"):
+		# self.model_name = model_name
+		self.use_feature_selection = use_feature_selection
+		self.k_features = k_features
+		self.random_state = random_state
+		self.dataset = dataset
+		self.pipeline = None
 
-	processed_data = {}
-	metadata = {}
+	def build_pipeline(self, X):
+		categorical_cols = X.select_dtypes(include=["object", "category"]).columns.tolist()
+		numeric_cols = X.select_dtypes(exclude=["object", "category"]).columns.tolist()
+		# preprocessor = ColumnTransformer(
+		# 	transformers=[
+		# 		("num", StandardScaler(), numeric_cols),
+		# 		("cat", CategoricalEncoder(
+		# 			categorical_columns=categorical_cols,
+		# 			handle_unknown="ignore"
+		# 		), categorical_cols), 
+		# 	],
+		# 	remainder="drop"
+		# )
 
-	for name, path in datasets.items():
-		print(f"Processing {name}")
-		processor = DatasetProcessor
-		features, labels = processor.process(path)
+		steps = [
+			("cleaner", DataCleaner()),
+			("feature_extraction", FeatureExtraction(dataset=self.dataset))
+			# ("encoder", MultiClassLabelEncoder()) Aplicar antes de entrenar el Pipeline
+			("categorical_encoder", CategoricalEncoder(categorical_columns=categorical_cols, handle_unknown='ignore'))
+			("scaler", DataScaler())
+			# ("preprocessor", preprocessor)
+		]
 
-		processed_data[name] = {
-			'features': features,
-			'labels': labels
-		}
+		if self.use_feature_selection:
+			steps.append(("feature_selection", FeatureSelector(k_features=self.k_features, random_state=self.random_state)))
+		
+		# steps.append(("model", get_model(self.model_name, self.random_state)))
 
-		metadata[name] = processor.feature_mapping_
+		self.pipeline = Pipeline(steps)
 
-		output_dir = Path('../data/processed') / name
-		output_dir.mkdir(parents=True, exist_ok=True)
+		return self.pipeline
 
-		features.to_parquet(output_dir / 'features.parquet')
-		labels.to_csv(output_dir / 'labels.csv')
+	def fit(self, X_train, y_train):
+		self.pipeline.fit(X_train, y_train)
 
-		with open (output_dir / 'features_mapping.json') as f:
-			json.dump(processor.feature_mapping_, f)
+	def predict(self, X_test):
+		return self.pipeline.predict(X_test)
 
-		split_and_store(
-			features,
-			output_dir,
-			test_size=0.2,
-			val_size=0.1,
-			random_state=42,
-			stratify_col='label'
-		)
+	def predict_proba(self, X_test):
+		return self.pipeline.predict_proba(X_test)
 
-
-	print('processing complete')
-
-
-if __name__ == '__main__':
-	main() 
-
+if __name__ == "__main__":
+	cic_df = pd.read_parquet('data/cic_ids2017.parquet')
+	unsw_df = pd.read_csv('data/unsw_nb15.csv')

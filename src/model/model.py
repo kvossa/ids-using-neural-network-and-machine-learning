@@ -80,5 +80,17 @@ class IDSModelFactory:
 
 		
 if __name__ == "__main__":
-    model = IDSModelFactory.create_model() 
-    model.summary()
+	model = IDSModelFactory.create_model(num_classes=10)
+	model.compile(
+		optimizer="adam", 
+		loss={
+			"classification": "categorical_crossentropy",
+			"reconstruction": "mse"
+		},
+		loss_weights={
+			"classification": 1.0,
+			"reconstruction": 0.3,
+		}
+	)
+
+	IDSModelFactory.model_summary(model)
