@@ -10,7 +10,7 @@ def split_and_store(
 		test_size: float = 0.2,
 		val_size: float = 0.1,
 		random_state: int = 42,
-		stratify_col: str = 'label'
+		stratify_col: str = 'attack_type'
 ) -> None:
 	
 	(output_dir / 'train').mkdir(parents=True, exist_ok=True)
@@ -58,3 +58,11 @@ def split_and_store(
 		'test': output_dir / 'test' / 'data.parquet',
 		'val': output_dir / 'val' / 'data.parquet'
 	}
+
+
+if __name__ == "__main__":
+	dataframe = pd.read_parquet('../../data/processed/CIC-IDS2017/cic_assembled.parquet')
+	output_folder = '../../data/processed/CIC-IDS2017/splits'
+	output_path = Path(output_folder)
+	split_and_store(df=dataframe, output_dir=output_path)
+	

@@ -1,4 +1,3 @@
-
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import OneHotEncoder
@@ -9,38 +8,35 @@ class CategoricalEncoder(BaseEstimator, TransformerMixin):
         self.categorical_columns = categorical_columns
         self.handle_unknown = handle_unknown
         # self.encoders_ = {}
-        # self.fitted_ = False
-        
+        self.fitted_ = False
+
     def fit(self, X, y=None):
+        X_copy = X.copy()
         if self.categorical_columns is None:
-            self.categorical_columns = X.select_dtypes(
-                include=['object', 'category']
-            ).columns.tolist()
+            self.categorical_columns = X_copy.select_dtypes(include=['object', 'category']).columns.tolist()
         
-        self.encoder_ = OneHotEncoder(
-            handle_unknown = self.handle_unknown,
-            sparse_output=False
-        )
+        X_copy[self.categorical_columns] = X_copy[self.categorical_columns].fillna("Missing").astype(str)
+        
+        self.encoder_ = OneHotEncoder(handle_unknown = self.handle_unknown, sparse_output=False)
 
         if len(self.categorical_columns) > 0:
-            self.encoder_.fit(X[self.categorical_columns])
+            self.encoder_.fit(X_copy[self.categorical_columns])
+            self.features_out_ = None
 
+        self.original_columns_ = X_copy.columns.tolist()
+        self.fitted_ = True
         return self
-        # for col in self.categorical_columns:
-        #     if col in X.columns:
-        #         le = LabelEncoder()
-        #         # Handle NaN values
-        #         X_clean = X[col].fillna('MISSING')
-        #         le.fit(X_clean.astype(str))
-        #         self.encoders_[col] = le
-        #         print(f"  - {col}: {len(le.classes_)} categories")
-                
-        # self.fitted_ = True
     
     def transform(self, X):
+        if not self.fitted_:
+            raise ValueError("Encoder must be fitted before transform")
+        
         X_encoded = X.copy()
+        X_encoded = X_encoded.reindex(columns=self.original_columns_, fill_value="Missing")
 
         if len(self.categorical_columns) > 0:
+            X_encoded[self.categorical_columns] = X_encoded[self.categorical_columns].fillna("Missing").astype(str)
+
             encoded_array = self.encoder_.transform(
                 X_encoded[self.categorical_columns]
             )
@@ -50,7 +46,7 @@ class CategoricalEncoder(BaseEstimator, TransformerMixin):
                 columns=self.encoder_.get_feature_names_out(
                     self.categorical_columns
                 ),
-                index=X.index
+                index=X_encoded.index
             )
 
             X_encoded = X_encoded.drop(
@@ -61,32 +57,11 @@ class CategoricalEncoder(BaseEstimator, TransformerMixin):
                 [X_encoded, encoded_df],
                 axis=1
             )
+        
+        if self.features_out_ is None:
+            self.features_out_ = X_encoded.columns.tolist()
+
+        X_encoded = X_encoded.reindex(columns=self.features_out_, fill_value=0)
 
         return X_encoded
         
-        # if not self.fitted_:
-        #     raise ValueError("Encoder must be fitted before transform")
-            
-        # for col, encoder in self.encoders_.items():
-        #     if col in X_encoded.columns:
-        #         # Handle unknown categories
-        #         X_clean = X_encoded[col].fillna('MISSING').astype(str)
-                
-        #         if self.handle_unknown == 'error':
-        #             # Check for unknown categories
-        #             known_classes = set(encoder.classes_)
-        #             unknown = X_clean[~X_clean.isin(known_classes)].unique()
-        #             if len(unknown) > 0:
-        #                 raise ValueError(f"Unknown categories in {col}: {unknown}")
-        #             X_encoded[f"{col}_encoded"] = encoder.transform(X_clean)
-                    
-        #         elif self.handle_unknown == 'ignore':
-        #             # Map unknown to -1
-        #             X_encoded[f"{col}_encoded"] = X_clean.map(
-        #                 lambda x: encoder.transform([x])[0] if x in encoder.classes_ else -1
-        #             )
-                    
-        #         # Drop original categorical column
-        #         X_encoded = X_encoded.drop(columns=[col])
-                
-	

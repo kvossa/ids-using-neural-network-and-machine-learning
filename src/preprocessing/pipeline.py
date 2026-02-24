@@ -60,5 +60,5 @@ class IDSPipeline:
 		return self.pipeline.predict_proba(X_test)
 
 if __name__ == "__main__":
-	cic_df = pd.read_parquet('data/cic_ids2017.parquet')
+	cic_df = pd.read_parquet('../../data/cic_ids2017.parquet')
 	unsw_df = pd.read_csv('data/unsw_nb15.csv')

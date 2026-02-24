@@ -17,6 +17,7 @@ import tensorflow as tf
 import numpy as np
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 from sklearn.model_selection import train_test_split
+from sklearn.utils.class_weight import compute_class_weight
 from ..model.model import IDSModelFactory
 from ..utils.logger import IDSLogger
 from pathlib import path
