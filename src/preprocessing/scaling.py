@@ -26,12 +26,12 @@ class DataScaler(BaseEstimator, TransformerMixin):
 		# self.fitted_ = False
 
 	def fit(self, X, y = None):
-		self.numeric_cols_ = X.select_dtypes(include=np.number).columns
+		self.numeric_cols_ = X.select_dtypes(include=np.number).columns.tolist()
 
 		# self.feature_columns_ = [col for col in self.numeric_cols_ if col != self.target_column] 
 		
-		if self.target_column in self.numeric_cols_:
-			self.numeric_cols_ = self.numeric_cols_.drop(self.target_column)
+		# if self.target_column in self.numeric_cols_:
+		# 	self.numeric_cols_ = self.numeric_cols_.drop(self.target_column)
 
 		if self.scaler_type == 'minmax':
 			self.scaler_ = MinMaxScaler()
@@ -42,9 +42,9 @@ class DataScaler(BaseEstimator, TransformerMixin):
 		else:
 			raise ValueError(f"Scaler unknown: {self.scaler_type}")
 
-		if len(self.feature_columns_) > 0:
+		if len(self.numeric_cols_) > 0:
 				
-			self.scaler.fit(X[self.numeric_cols_])
+			self.scaler_.fit(X[self.numeric_cols_])
 			# self.feature_columns_ = self.numeric_cols_
 			# self.fitted_ = True
 			print(f"Scaler fitted on {len(self.numeric_cols_)} numeric features")
@@ -56,9 +56,7 @@ class DataScaler(BaseEstimator, TransformerMixin):
 		X_scaled = X.copy()
 
 		if self.scaler_ is not None:
-			X_scaled[self.numeric_cols_] = self.scaler_.transform(
-				X_scaled[self.numeric_cols_]
-			)
+			X_scaled[self.numeric_cols_] = self.scaler_.transform(X_scaled[self.numeric_cols_])
 
 		return X_scaled
 
@@ -79,6 +77,9 @@ class MultiClassLabelEncoder(BaseEstimator, TransformerMixin):
 		# self.classes_ = None
         
 	def fit(self, X, y=None):
+
+		if isinstance(X, pd.DataFrame):
+			X = X.squeeze()
 		
 		if self.target_col not in X.columns:
 			raise ValueError(f"target column {self.target_col} not found in dataset")
@@ -96,7 +97,13 @@ class MultiClassLabelEncoder(BaseEstimator, TransformerMixin):
 		return self
 		
 	def transform(self, X):
+		if not self.fitted_:
+			raise ValueError("Label encoder must be fitted before transform")
+
 		X_transformed = X.copy()
+
+		if isinstance(X_transformed, pd.DataFrame):
+			X_transformed = X_transformed.squeeze()
 		
 		if self.target_col in X_transformed.columns:
 			X_transformed[self.target_col] = (

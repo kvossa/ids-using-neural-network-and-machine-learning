@@ -13,74 +13,98 @@
 # logger.log('INFO', 'Training complete', metrics={'accuracy': 0.95})
 
 import yaml
+import joblib
 import tensorflow as tf
 import numpy as np
-from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau
+from keras.metrics import AUC, Precision, Recall, F1Score, FalsePositives
 from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
 from ..model.model import IDSModelFactory
 from ..utils.logger import IDSLogger
-from pathlib import path
+from ..utils.train_stopper import F1EarlyStopping
+from pathlib import Path
 
-class IDSTrainer:
+X_train = {
+    "ae_input": np.load("X_train_ae.npy"),
+    "cnn_input": np.load("X_train_cnn.npy"),
+    "lstm_input": np.load("X_train_lstm.npy"),
+}
 
-    def __init__(self, config_path='configs/models_param.yaml'):
-        self.logger = IDSLogger()
-        self.config = self._load_config(config_path)
-        self.model = None
-        self.history = None
+X_val = {
+    "ae_input": np.load("X_val_ae.npy"),
+    "cnn_input": np.load("X_val_cnn.npy"),
+    "lstm_input": np.load("X_val_lstm.npy"),
+}
 
-    def _load_config(self, config_path):
-        with open(config_path) as f:
-            config = yaml.safe_load(f)
-        self.logger.log('INFO', f'Loaded config: {config}')
-        return config
+y_train = np.load("y_train.npy")
+y_val = np.load("y_val.npy")
 
-    def prepare_data(self, data_path):
-        data = np.load(data_path)
-        X_train, X_val, y_train, y_val = train_test_split(
-            data['X'], data['y'],
-            test_size=self.config['val_split'],
-            stratify=data['y']
-        )
-        self.logger.log('INFO', f'Data shapes - X_train: {X_train.shape}, y_train: {y_train.shape}')
-        return X_train, X_val, y_train, y_val
+y_labels = np.argmax(y_train, axis=1)
+classes = np.unique(y_labels)
 
-    def train_model(self, X_train, y_train, X_val, y_val):
-        model_type = self.config['model_type']
-        input_shape = X_train.shape[1:]
+weights = compute_class_weight(class_weight="balanced", classes=classes, y=y_labels)
 
-        if model_type == 'mlp':
-            self.model = IDSModelFactory.create_mlp(input_shape[0])
-        elif model_type == 'lstm':
-            self.model = IDSModelFactory.create_lstm(input_shape)
-        elif model_type == 'autoencoder':
-            self.model = IDSModelFactory.create_autoencoder(input_shape[0])
-            y_train = X_train  
+class_weight_dict = dict(zip(classes, weights))
 
-        self.model.compile(
-            optimizer=tf.keras.optimizers.Adam(learning_rate=self.config['learning_rate']),
-            loss='binary_crossentropy',
-            metrics=['accuracy']
-        )
+model = IDSModelFactory.create_model()
 
-        callbacks = [
-            EarlyStopping(patience=5, monitor='val_loss'),
-            ModelCheckpoint('./models/ids.h5', save_best_only=True)
-        ]
+model.compile(
+    optimizer="adam", 
+    metrics=["accuracy", Precision(), Recall(), F1Score(), AUC(), FalsePositives()],
+    loss={
+        "classification": "categorical_crossentropy",
+        "reconstruction": "mse"
+    },
+    loss_weights={
+        "classification": 1.0,
+        "reconstruction": 0.3,
+    }
+)
 
-        self.history = self.model.fit(
-            X_train, y_train,
-            validation_data=(X_val, y_val),
-            epochs=self.config['epochs'],
-            batch_size=self.config['batch_size'],
-            callbacks=callbacks,
+f1_callback = F1EarlyStopping(
+    validation_data=(
+        X_val,
+        {
+            "classification": y_val,
+            "reconstruction": X_val["ae_input"]
+        }
+    ),
+    patience=7
+)
+
+checkpoint = tf.keras.callbacks.ModelCheckpoint(
+    "best_ids_model.h5",
+    monitor="val_loss",
+    save_best_only=True,
+    verbose=1
+)
+
+reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(
+    monitor="val_loss",
+    factor=0.5,
+    patience=3,
+    verbose=1
+)
+
+
+history = model.fit(
+            X_train,
+            {
+                "classification": y_train,
+                "reconstruction": X_train["ae_input"]
+            },
+            validation_data=(X_val, 
+                {
+                    "classification": y_val,
+                    "reconstruction": X_val["ae_input"]
+                }
+            ),
+            epochs=100,
+            batch_size=128,
+            callbacks=[f1_callback, checkpoint, reduce_lr],
+            class_weight={
+                "classification": class_weight_dict
+            },
             verbose=1
         )
-        return self.history
-
-if __name__ == "__main__":
-    trainer = IDSTrainer()
-    X_train, X_val, y_train, y_val = trainer.prepare_data('data/processed/train_data.npz')
-    history = trainer.train_model(X_train, y_train, X_val, y_val)
-	

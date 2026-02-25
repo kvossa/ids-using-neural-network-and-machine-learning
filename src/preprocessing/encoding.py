@@ -12,6 +12,10 @@ class CategoricalEncoder(BaseEstimator, TransformerMixin):
 
     def fit(self, X, y=None):
         X_copy = X.copy()
+
+        # if isinstance(X_copy, pd.DataFrame):
+            # y = X_copy.squeeze()
+
         if self.categorical_columns is None:
             self.categorical_columns = X_copy.select_dtypes(include=['object', 'category']).columns.tolist()
         
@@ -31,6 +35,9 @@ class CategoricalEncoder(BaseEstimator, TransformerMixin):
         if not self.fitted_:
             raise ValueError("Encoder must be fitted before transform")
         
+        # if isinstance(y, pd.DataFrame):
+#         #     y = y.squeeze()
+
         X_encoded = X.copy()
         X_encoded = X_encoded.reindex(columns=self.original_columns_, fill_value="Missing")
 

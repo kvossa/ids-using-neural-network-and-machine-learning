@@ -7,7 +7,7 @@ from sklearn.ensemble import RandomForestClassifier
 
 class FeatureSelector: 
 
-    def __init__(self, k_features=20, random_state=42, use_anova=True, use_mi=True, use_rf=True, use_rfe=True):
+    def __init__(self, k_features=20, random_state=42, use_anova=False, use_mi=True, use_rf=False, use_rfe=False):
         self.k_features = k_features
         self.random_state = random_state
         self.use_anova = use_anova
@@ -17,8 +17,9 @@ class FeatureSelector:
         self.results_ = None
         self.selected_features_ = None
 
-    def fit(self, X, y, feature_names):
-        importance_df = pd.DataFrame({"feature": feature_names})
+    def fit(self, X, y):
+        self.feature_names_ = X.columns.tolist()
+        importance_df = pd.DataFrame({"feature": self.feature_names_})
 
         if self.use_anova:
             f_selector = SelectKBest(score_func=f_classif, k="all")
@@ -69,13 +70,16 @@ class FeatureSelector:
 
         return self
 
-    def transform(X, y, feature_names):
+    def transform(self, X):
         if self.selected_features_ is None:
             raise ValueError("Call fit() before translation")
         
-        feature_index = [feature_names.index(f) for f in self.selected_features_]
+        return X[self.selected_features_]
 
-        return X[:, feature_index]
+        
+        # feature_index = [self.feature_names_.index(f) for f in self.selected_features_]
+
+        # return X[:, feature_index]
 
     def get_feature_ranking(self):
         return self.results_

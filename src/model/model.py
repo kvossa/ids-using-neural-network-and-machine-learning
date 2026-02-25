@@ -84,7 +84,9 @@ class IDSModelFactory:
 		model.summary()
 
 	def save_model(model, name:str):
-		model.save(name)
+		return model.save(name)
+
+	
 		
 if __name__ == "__main__":
 	model = IDSModelFactory.create_model(num_classes=10)

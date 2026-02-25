@@ -21,8 +21,8 @@ class DataCleaner(BaseEstimator, TransformerMixin):
 		X_clean = X_clean.fillna(0)
 		return X_clean
 
-if __name__ == "__main__":
-    df = pd.read_csv('data/raw/cicids2017/MachineLearningCSV.csv')
-    cleaner = DataCleaner()
-    cleaned_df = cleaner.transform(df)
-    cleaned_df.to_csv('data/processed/cleaned.csv', index=False)
+# if __name__ == "__main__":
+#     df = pd.read_csv('data/raw/cicids2017/MachineLearningCSV.csv')
+#     cleaner = DataCleaner()
+#     cleaned_df = cleaner.transform(df)
+#     cleaned_df.to_csv('data/processed/cleaned.csv', index=False)
