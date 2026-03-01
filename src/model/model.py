@@ -1,5 +1,5 @@
 from keras.models import Model, Sequential
-from keras.layers import Input, Dense, LSTM, Dropout, Conv1D, MaxPooling1D, Flatten, concatenate, BatchNormalization, LayerNormalization, GlobalAveragePooling1D, Reshape
+from keras.layers import Input, Dense, LSTM, Dropout, Conv1D, MaxPooling1D, Flatten, Concatenate, BatchNormalization, LayerNormalization, GlobalAveragePooling1D, Reshape
 from keras.regularizers import l2
 from keras.metrics import AUC, Precision, Recall, F1Score, FalsePositives
 
@@ -29,10 +29,10 @@ class IDSModelFactory:
 		cnn_input = Input(shape=input_dim_cnn, name='cnn_input')
 		cnn_conv1 = Conv1D(filters=64, kernel_size=3, padding='same', activation='relu', kernel_regularizer=l2(0.0001))(cnn_input)
 		cnn_bn1 = BatchNormalization(momentum=0.97, epsilon=1e-5)(cnn_conv1)
-		cnn_pool1 = MaxPooling1D(pool_size=2)(cnn_bn1)
+		cnn_pool1 = MaxPooling1D(pool_size=1)(cnn_bn1)
 		cnn_conv2 = Conv1D(filters=128, kernel_size=3, padding='same', activation='relu', kernel_regularizer=l2(0.0001))(cnn_pool1)
 		cnn_bn2 = BatchNormalization(momentum=0.97, epsilon=1e-5)(cnn_conv2)
-		cnn_pool2 = MaxPooling1D(pool_size=2)(cnn_bn2)
+		cnn_pool2 = MaxPooling1D(pool_size=1)(cnn_bn2)
 		cnn_global_pooled = GlobalAveragePooling1D(name='cnn_global_pool')(cnn_pool2)
 		cnn_dropout = Dropout(0.2)(cnn_global_pooled)
 
@@ -45,8 +45,8 @@ class IDSModelFactory:
 
 		lstm_features = lstm_dropout
 
-		combined = concatenate(name='feature_fusion')([
-			ae_feautures,
+		combined = Concatenate(name='feature_fusion')([
+			ae_features,
 			cnn_features,
 			lstm_features
 		])
@@ -76,7 +76,6 @@ class IDSModelFactory:
 		print("=" * 80)
 		print("HYBRID IDS MODEL ARCHITECTURE")
 		print("=" * 80)
-		print(f"Autoencoder Branch: {input_dim_ae} → 64 → 32 → 64 → {input_dim_ae}")
 		print(f"CNN Branch: 2x (Conv1D(32) → BatchNorm → MaxPool)")
 		print(f"LSTM Branch: LSTM(128) with LayerNorm")
 		print(f"Fusion Layer: Combined features ({32+32+128} dimensions)")

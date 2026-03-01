@@ -13,9 +13,13 @@ class F1EarlyStopping(Callback):
         self.best_weights = None
     
     def on_epoch_end(self, epoch, logs=None):
+        if self.best_weights is not None:
+            self.model.set_weights(self.best_weights)
+                    
         predictions = self.model.predict(self.X_val, verbose=0)
 
         y_pred = np.argmax(predictions["classification"], axis=1)
+        # y_true_ohe = self.y_val["classification"]        
         y_true = np.argmax(self.y_val["classification"], axis=1)
 
         f1 = f1_score(y_true=y_true, y_pred=y_pred, average="macro")
@@ -32,3 +36,4 @@ class F1EarlyStopping(Callback):
                 print("Early stopping triggered. Restoring best weights.")
                 self.model.set_weights(self.best_weights)   
                 self.model.stop_training = True
+

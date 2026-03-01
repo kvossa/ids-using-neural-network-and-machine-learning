@@ -103,7 +103,7 @@ class FeatureExtraction(BaseEstimator, TransformerMixin):
         ]
         self.specific_blocks = {
             "CIC": CICFeatures(),
-            "UNSW": UNSWFeatures
+            "UNSW": UNSWFeatures()
         } 
 
     def fit(self, X, y=None):

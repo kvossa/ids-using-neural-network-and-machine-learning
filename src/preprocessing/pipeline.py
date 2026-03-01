@@ -2,11 +2,11 @@ import pandas as pd
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.compose import ColumnTransformer
-from features_extraction import FeatureExtraction
-from features_selection import FeatureSelector
-from clean import DataCleaner
-from scaling import DataScaler, MultiClassLabelEncoder
-from encoding import CategoricalEncoder
+from src.preprocessing.features_extraction import FeatureExtraction
+from src.preprocessing.features_selection import FeatureSelector
+from src.preprocessing.clean import DataCleaner
+from src.preprocessing.scaling import DataScaler, MultiClassLabelEncoder
+from src.preprocessing.encoding import CategoricalEncoder
 
 class IDSPipeline:
 	def __init__(self, use_feature_selection=True, k_features=30, random_state=42, dataset="CIC"):

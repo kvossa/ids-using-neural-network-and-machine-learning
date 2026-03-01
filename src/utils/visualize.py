@@ -1,13 +1,14 @@
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
-from sklearn.metrics import confusion_matrix, roc_curve, auc
+from sklearn.metrics import confusion_matrix, roc_curve, auc, roc_auc_score
+from sklearn.preprocessing import label_binarize
 import plotly.graph_objects as go
 from pathlib import Path
 
 class IDSVisualizer:
 
-	def __init__(self, output_dir='report/figures'):
+	def __init__(self, output_dir='../../report/figures'):
 		self.output_dir = Path(output_dir)
 		self.output_dir.mkdir(parents=True, exist_ok=True)
 		sns.set_style('whitegrid')
@@ -38,15 +39,22 @@ class IDSVisualizer:
 		ax.set_title('Confusion Matrix (%)')
 		self.save_fig(fig, 'confusion_matrix')
 
-	def plot_roc_curve(self, y_true, y_scores):
+	def plot_roc_curve(self, y_true, y_scores, classes):
 		"""Interactive ROC curve with Plotly"""
-		fpr, tpr, _ = roc_curve(y_true, y_scores)
-		roc_auc = auc(fpr, tpr)
-		
+		unique_classes = np.unique(y_true)
+		y_true_bin = label_binarize(y_true, classes=unique_classes)		
 		fig = go.Figure()
-		fig.add_trace(go.Scatter(x=fpr, y=tpr,
-								mode='lines',
-								name=f'ROC (AUC = {roc_auc:.2f})'))
+
+		auc_macro = roc_auc_score(y_true=y_true_bin, y_score=y_scores, average="macro", multi_class="ovr")
+		auc_weighted = roc_auc_score(y_true=y_true_bin, y_score=y_scores, average="weighted", multi_class="ovr")
+
+		for i in range(len(unique_classes)):
+			fpr, tpr, _ = roc_curve(y_true_bin[:, i], y_scores[:, i])
+			roc_auc = auc(fpr, tpr)
+			fig.add_trace(go.Scatter(x=fpr, y=tpr,
+									mode='lines',
+									name=f'{unique_classes[i]} (AUC = {roc_auc:.2f})'))
+
 		fig.add_trace(go.Scatter(x=[0, 1], y=[0, 1],
 								mode='lines',
 								line=dict(dash='dash'),
@@ -85,3 +93,5 @@ if __name__ == "__main__":
     viz.plot_feature_distribution(df, 'packet_size')
     viz.plot_confusion_matrix([0,1,0,1], [0,0,1,1])
     viz.plot_roc_curve(df['label'], np.random.random(len(df)))
+
+	

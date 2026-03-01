@@ -1,7 +1,7 @@
 import joblib
 import pandas as pd
-from pipeline import IDSPipeline
-from scaling import MultiClassLabelEncoder
+from src.preprocessing.pipeline import IDSPipeline
+from src.preprocessing.scaling import MultiClassLabelEncoder
 from pathlib import Path
 from sklearn.preprocessing import LabelEncoder
 
@@ -52,7 +52,7 @@ def call(train_path:Path, test_path:Path, val_path:Path, dataset:str, stratify_c
     print(X_train_processed.shape)
     print(X_test_processed.shape)
 
-    print("##summary##")
+    print("##types##")
     print(X_train_processed.isna().sum().sum())
     print(X_train_processed.dtypes.unique())
 
@@ -66,7 +66,12 @@ def call(train_path:Path, test_path:Path, val_path:Path, dataset:str, stratify_c
     print("##balance##")
     print(pd.Series(y_train_enc).value_counts(normalize=True))
 
-    model_path = f'../../models/preprocessing/{dataset.lower}/preprocessing.pkl'
+    label_encoder_path = f"models/preprocessing/{dataset.lower()}/label_encoder.pkl"
+    joblib.dump(label_encoder, label_encoder_path)
+
+    print(f"label encoder saved in {label_encoder_path}")
+
+    model_path = f'models/preprocessing/{dataset.lower()}/preprocessing.pkl'
     joblib.dump(preprocessing_pipeline, model_path)
 
     print(f"preprocessing model saved in {model_path}")
@@ -77,19 +82,19 @@ def call(train_path:Path, test_path:Path, val_path:Path, dataset:str, stratify_c
 if __name__ == "__main__":
     #CIC
     dataset: str = "CIC"
-    train_path: Path = Path('../../data/processed/CIC-IDS2017/splits/train/data.parquet')
-    test_path: Path = Path('../../data/processed/CIC-IDS2017/splits/test/data.parquet')
-    val_path: Path = Path('../../data/processed/CIC-IDS2017/splits/val/data.parquet')
+    train_path: Path = Path('data/processed/CIC-IDS2017/splits/train/data.parquet')
+    test_path: Path = Path('data/processed/CIC-IDS2017/splits/test/data.parquet')
+    val_path: Path = Path('data/processed/CIC-IDS2017/splits/val/data.parquet')
     stratify_column:str = 'attack_type'
     #UNSW
     # dataset: str = "UNSW"
-    # train_path: Path = Path('../../data/processed/UNSW-NB15/splits/train.csv')
-    # test_path: Path = Path('../../data/processed/UNSW-NB15/splits/test.csv')
-    # val_path: Path = Path('../../data/processed/UNSW-NB15/splits/validation.csv')
+    # train_path: Path = Path('data/processed/UNSW-NB15/splits/train.csv')
+    # test_path: Path = Path('data/processed/UNSW-NB15/splits/test.csv')
+    # val_path: Path = Path('data/processed/UNSW-NB15/splits/validation.csv')
     # stratify_column = 'attack_cat'
 
 
-    call(train_path=train_path, test_path=test_path, val_path=val_path, dataset='CIC', stratify_column=stratify_column)
+    call(train_path=train_path, test_path=test_path, val_path=val_path, dataset=dataset, stratify_column=stratify_column)
 
 
 
