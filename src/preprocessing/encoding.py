@@ -9,6 +9,7 @@ class CategoricalEncoder(BaseEstimator, TransformerMixin):
         self.handle_unknown = handle_unknown
         # self.encoders_ = {}
         self.fitted_ = False
+        self.features_out_ = None
 
     def fit(self, X, y=None):
         X_copy = X.copy()
@@ -25,7 +26,11 @@ class CategoricalEncoder(BaseEstimator, TransformerMixin):
 
         if len(self.categorical_columns) > 0:
             self.encoder_.fit(X_copy[self.categorical_columns])
-            self.features_out_ = None
+            encoded_features = self.encoder_.get_feature_names_out(self.categorical_columns)
+            numeric_cols = [c for c in X_copy.columns if c not in self.categorical_columns]
+            self.features_out_ = numeric_cols + list(encoded_features)
+        else:
+            self.features_out_ = X_copy.columns.tolist()
 
         self.original_columns_ = X_copy.columns.tolist()
         self.fitted_ = True
@@ -65,8 +70,8 @@ class CategoricalEncoder(BaseEstimator, TransformerMixin):
                 axis=1
             )
         
-        if self.features_out_ is None:
-            self.features_out_ = X_encoded.columns.tolist()
+        # if self.features_out_ is None:
+        #     self.features_out_ = X_encoded.columns.tolist()
 
         X_encoded = X_encoded.reindex(columns=self.features_out_, fill_value=0)
 

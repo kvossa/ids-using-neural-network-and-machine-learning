@@ -1,12 +1,14 @@
 import pandas as pd
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
+# from sklearn.preprocessing import StandardScaler
 from sklearn.compose import ColumnTransformer
+from sklearn.impute import SimpleImputer
 from src.preprocessing.features_extraction import FeatureExtraction
 from src.preprocessing.features_selection import FeatureSelector
 from src.preprocessing.clean import DataCleaner
 from src.preprocessing.scaling import DataScaler, MultiClassLabelEncoder
 from src.preprocessing.encoding import CategoricalEncoder
+
 
 class IDSPipeline:
 	def __init__(self, use_feature_selection=True, k_features=30, random_state=42, dataset="CIC"):
@@ -36,6 +38,7 @@ class IDSPipeline:
 			("feature_extraction", FeatureExtraction(dataset=self.dataset)),
 			# ("encoder", MultiClassLabelEncoder()) Aplicar antes de entrenar el Pipeline
 			("categorical_encoder", CategoricalEncoder(handle_unknown='ignore')),
+			('imputer', SimpleImputer(strategy="median")),
 			("scaler", DataScaler()),
 			# ("preprocessor", preprocessor)
 		]

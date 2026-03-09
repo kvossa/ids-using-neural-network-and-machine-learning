@@ -14,6 +14,7 @@
 
 # import yaml
 import joblib
+import json
 import tensorflow as tf
 import numpy as np
 import pandas as pd
@@ -24,6 +25,7 @@ from keras.metrics import AUC, Precision, Recall, F1Score, FalsePositives, False
 from keras.utils import to_categorical
 from sklearn.utils.class_weight import compute_class_weight
 from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import classification_report
 from src.model.model import IDSModelFactory
 from src.utils.logger import IDSLogger
 from src.utils.train_stopper import F1EarlyStopping
@@ -44,6 +46,7 @@ test_df = pd.read_parquet('data/processed/CIC-IDS2017/splits/test/data.parquet')
 val_df = pd.read_parquet('data/processed/CIC-IDS2017/splits/val/data.parquet')
 dataset = "CIC"
 stratify_column = 'attack_type'
+drop_columns = ["Label", "attack_label", "attack_type", "source_file"]
 
 # UNSW
 # train_df = pd.read_csv(Path('data/processed/UNSW-NB15/splits/train.csv'))
@@ -51,15 +54,20 @@ stratify_column = 'attack_type'
 # val_df = pd.read_csv(Path('data/processed/UNSW-NB15/splits/validation.csv'))
 # dataset = "UNSW"
 # stratify_column = 'attack_cat'
+# drop_columns = ["attack_cat"]
 
-X_train = train_df.drop(stratify_column, axis=1)
+
+X_train = train_df.drop(columns=drop_columns, axis=1)
 y_train = train_df[stratify_column]
 
-X_test = test_df.drop(stratify_column, axis=1)
+X_test = test_df.drop(columns=drop_columns, axis=1)
 y_test = test_df[stratify_column]
 
-X_val = val_df.drop(stratify_column, axis=1)
+X_val = val_df.drop(columns=drop_columns, axis=1)
 y_val = val_df[stratify_column]
+
+# print("####Colunmnas de Xtrain")
+# print(X_train.columns)
 
 preprocessor = joblib.load(f'models/preprocessing/{dataset.lower()}/preprocessing.pkl')
 label_encoder = joblib.load(f'models/preprocessing/{dataset.lower()}/label_encoder.pkl')
@@ -74,12 +82,13 @@ y_val_encoded = label_encoder.transform(y_val)
 
 classes = np.unique(y_train_encoded)
 
-#Solo para UNSW#
-# weights = compute_class_weight(class_weight="balanced", classes=classes, y=y_train_encoded) 
-# class_weight_dict = dict(zip(classes, weights))
-# # class_weight_dict = dict(enumerate(weights))
-# sample_weights = np.array([class_weight_dict[y] for y in y_train_encoded])
-################
+weights = compute_class_weight(class_weight="balanced", classes=classes, y=y_train_encoded) 
+class_weight_dict = dict(zip(classes, weights))
+# class_weight_dict = dict(enumerate(weights))
+sample_weights = np.array([class_weight_dict[y] for y in y_train_encoded])
+
+# print("Correlations")
+# print(X_train.corrwith(pd.Series(y_train_encoded)).sort_values(ascending=False))
 
 print("##shape##")
 print(X_train_processed.shape)
@@ -125,6 +134,7 @@ X_val_inputs = {
     "lstm_input": X_val_seq
 }
 
+
 y_train_ohe = to_categorical(y_train_encoded, num_classes=num_classes)
 y_test_ohe = to_categorical(y_test_encoded, num_classes=num_classes)
 y_val_ohe = to_categorical(y_val_encoded, num_classes=num_classes)
@@ -160,7 +170,7 @@ f1_callback = F1EarlyStopping(
             "reconstruction": X_val_processed
         }
     ),
-    patience=7
+    patience=10
 )
 
 checkpoint = tf.keras.callbacks.ModelCheckpoint(
@@ -191,15 +201,13 @@ history = model.fit(
             "reconstruction": X_val_processed
         }
     ),
-    epochs=5,#70-100
+    epochs=5, #70-100
     batch_size=64,#128
     callbacks=[f1_callback, checkpoint, reduce_lr],
-    #Only for UNSW
-    # sample_weight={
-        # "classification": sample_weights,
-        # "reconstruction": np.ones(len(sample_weights))
-    # },
-    #######
+    sample_weight={
+        "classification": sample_weights,
+        "reconstruction": np.ones(len(sample_weights))
+    },
     verbose=1
 )
 
@@ -218,9 +226,30 @@ y_true = y_test_encoded
 
 visuals_path = Path(f"reports/figures/{dataset.lower()}")
 
+
 visualizer = IDSVisualizer(output_dir=visuals_path)
 class_names = sorted(train_df[stratify_column].unique())
 print(f"class names: {class_names}")
+
+history_df = pd.DataFrame(history.history)
+history_df.to_csv(f"reports/metrics/{dataset.lower()}/training_metrics.csv")
+
+report = classification_report(y_true=y_true, y_pred=y_pred, target_names=class_names, output_dict=True)
+report_df = pd.DataFrame(report).transpose()
+report_df.to_csv(f"reports/metrics/{dataset.lower()}/classification_report.csv")
+
+# metrics_summary = {
+#     "dataset": dataset,
+#     "epochs": len(history.history["loss"]),
+#     "final_train_accuracy": history.history["accuracy"][-1],
+#     "final_val_accuracy": history.history["val_accuracy"][-1],
+#     "final_train_f1": history.history["f1_score"][-1],
+#     "final_val_f1": history.history["val_f1_score"][-1]
+# }
+
+# with open(f"reports/metrics/{dataset.lower()}_summary.json","w") as f:
+#     json.dump(metrics_summary, f, indent=4)
+
 visualizer.plot_confusion_matrix(y_true=y_true, y_pred=y_pred, classes=(range(num_classes)))
 visualizer.plot_roc_curve(y_true=y_true, y_scores=y_pred_probs, classes=class_names)
 

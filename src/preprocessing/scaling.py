@@ -26,10 +26,12 @@ class DataScaler(BaseEstimator, TransformerMixin):
 		# self.fitted_ = False
 
 	def fit(self, X, y = None):
+		if isinstance(X, np.ndarray):
+			X = pd.DataFrame(X)		
+		
 		self.numeric_cols_ = X.select_dtypes(include=np.number).columns.tolist()
 
 		# self.feature_columns_ = [col for col in self.numeric_cols_ if col != self.target_column] 
-		
 		# if self.target_column in self.numeric_cols_:
 		# 	self.numeric_cols_ = self.numeric_cols_.drop(self.target_column)
 
@@ -53,6 +55,9 @@ class DataScaler(BaseEstimator, TransformerMixin):
 		return self
 	
 	def transform(self, X):
+		if isinstance(X, np.ndarray):
+			X = pd.DataFrame(X)		
+			
 		X_scaled = X.copy()
 
 		if self.scaler_ is not None:

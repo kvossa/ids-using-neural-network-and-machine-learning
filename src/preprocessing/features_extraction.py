@@ -36,9 +36,9 @@ class InteractionFeatures(BaseEstimator, TransformerMixin):
     def transform(self, X):
         X_transformed = X.copy()
 
-        if {'ct_srv_src', 'ct_state_ttl'}.issubset(X.columns):
+        if {'ct_srv_src', 'ct_state_ttl'}.issubset(X_transformed.columns):
             X['service_state_interaction'] = (
-                X['ct_srv_src'] * X['ct_state_ttl']
+                X_transformed['ct_srv_src'] * X_transformed['ct_state_ttl']
             )
 
         return X
@@ -85,8 +85,8 @@ class CICFeatures(BaseEstimator, TransformerMixin):
     def transform(self, X):
         X_transformed = X.copy()
 
-        X['fwd_packets_per_second'] = (
-            X['Total Fwd Packets'] / (X['Flow Duration'] + 1)
+        X_transformed['fwd_packets_per_second'] = (
+            X_transformed['Total Fwd Packets'] / (X_transformed['Flow Duration'] + 1)
         )
         
         return X_transformed
@@ -117,6 +117,8 @@ class FeatureExtraction(BaseEstimator, TransformerMixin):
 
         if self.dataset in self.specific_blocks:
             X_transformed = self.specific_blocks[self.dataset].transform(X_transformed)
+
+        X_transformed = X_transformed.replace([np.inf, -np.inf], np.nan)
 
         print(f"Feature extraction completed for {self.dataset}")
         print(f"total features: {len(X_transformed.columns)}")

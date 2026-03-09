@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
-from sklearn.metrics import confusion_matrix, roc_curve, auc, roc_auc_score
+from sklearn.metrics import confusion_matrix, roc_curve, auc, roc_auc_score, classification_report
 from sklearn.preprocessing import label_binarize
 import plotly.graph_objects as go
 from pathlib import Path
@@ -78,6 +78,8 @@ class IDSVisualizer:
 			ax.set_title('Attack Ratio Over Time')
 			ax.set_ylabel('Attack Probability')
 			self.save_fig(fig, 'attack_timeline')
+	
+
 
 if __name__ == "__main__":
     viz = IDSVisualizer()

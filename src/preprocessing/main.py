@@ -20,19 +20,21 @@ def call(train_path:Path, test_path:Path, val_path:Path, dataset:str, stratify_c
         X_train = load_cic(train_path)
         X_test = load_cic(test_path)
         X_val = load_cic(val_path)
+        drop_columns = ["Label", "attack_label", "attack_type", "source_file"]
     elif dataset == 'UNSW':
         X_train = load_unsw(train_path)
         X_test = load_unsw(test_path)
         X_val = load_unsw(val_path)
+        drop_columns = ["attack_cat"]
 
     y_train = X_train[stratify_column]
-    X_train = X_train.drop(stratify_column, axis=1)
+    X_train = X_train.drop(columns=drop_columns, axis=1)
 
     y_test = X_test[stratify_column]
-    X_test = X_test.drop(stratify_column, axis=1)
+    X_test = X_test.drop(columns=drop_columns, axis=1)
 
     y_val = X_val[stratify_column]
-    X_val = X_val.drop(stratify_column, axis=1)
+    X_val = X_val.drop(columns=drop_columns, axis=1)
 
     # label_encoder = MultiClassLabelEncoder( target_col=stratify_column)
     label_encoder = LabelEncoder()
@@ -81,17 +83,17 @@ def call(train_path:Path, test_path:Path, val_path:Path, dataset:str, stratify_c
 
 if __name__ == "__main__":
     #CIC
-    dataset: str = "CIC"
-    train_path: Path = Path('data/processed/CIC-IDS2017/splits/train/data.parquet')
-    test_path: Path = Path('data/processed/CIC-IDS2017/splits/test/data.parquet')
-    val_path: Path = Path('data/processed/CIC-IDS2017/splits/val/data.parquet')
-    stratify_column:str = 'attack_type'
+    # dataset: str = "CIC"
+    # train_path: Path = Path('data/processed/CIC-IDS2017/splits/train/data.parquet')
+    # test_path: Path = Path('data/processed/CIC-IDS2017/splits/test/data.parquet')
+    # val_path: Path = Path('data/processed/CIC-IDS2017/splits/val/data.parquet')
+    # stratify_column:str = 'attack_type'
     #UNSW
-    # dataset: str = "UNSW"
-    # train_path: Path = Path('data/processed/UNSW-NB15/splits/train.csv')
-    # test_path: Path = Path('data/processed/UNSW-NB15/splits/test.csv')
-    # val_path: Path = Path('data/processed/UNSW-NB15/splits/validation.csv')
-    # stratify_column = 'attack_cat'
+    dataset: str = "UNSW"
+    train_path: Path = Path('data/processed/UNSW-NB15/splits/train.csv')
+    test_path: Path = Path('data/processed/UNSW-NB15/splits/test.csv')
+    val_path: Path = Path('data/processed/UNSW-NB15/splits/validation.csv')
+    stratify_column = 'attack_cat'
 
 
     call(train_path=train_path, test_path=test_path, val_path=val_path, dataset=dataset, stratify_column=stratify_column)
