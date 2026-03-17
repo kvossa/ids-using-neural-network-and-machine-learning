@@ -26,6 +26,9 @@ from keras.utils import to_categorical
 from sklearn.utils.class_weight import compute_class_weight
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import classification_report
+from imblearn.over_sampling import SMOTE
+from imblearn.under_sampling import RandomUnderSampler
+from src.training.focal_loss import focal_loss
 from src.model.model import IDSModelFactory
 from src.utils.logger import IDSLogger
 from src.utils.train_stopper import F1EarlyStopping
@@ -36,8 +39,6 @@ from src.preprocessing.encoding import CategoricalEncoder
 from src.preprocessing.features_extraction import FeatureExtraction
 from src.preprocessing.features_selection import FeatureSelector
 from src.preprocessing.scaling import StandardScaler
-
-
 from pathlib import Path
 
 # CIC
@@ -82,10 +83,11 @@ y_val_encoded = label_encoder.transform(y_val)
 
 classes = np.unique(y_train_encoded)
 
-weights = compute_class_weight(class_weight="balanced", classes=classes, y=y_train_encoded) 
-class_weight_dict = dict(zip(classes, weights))
-# class_weight_dict = dict(enumerate(weights))
-sample_weights = np.array([class_weight_dict[y] for y in y_train_encoded])
+
+# weights = compute_class_weight(class_weight="balanced", classes=classes, y=y_train_encoded) 
+# class_weight_dict = dict(zip(classes, weights))
+# # class_weight_dict = dict(enumerate(weights))
+# sample_weights = np.array([class_weight_dict[y] for y in y_train_encoded])
 
 # print("Correlations")
 # print(X_train.corrwith(pd.Series(y_train_encoded)).sort_values(ascending=False))
@@ -108,13 +110,22 @@ window_size = 1
 num_features = X_train_processed.shape[1]
 num_classes = len(label_encoder.classes_)
 
-X_train_processed_array = X_train_processed.values
+if dataset == 'UNSW':
+    smote = SMOTE(k_neighbors=3, sampling_strategy="not majority")
+    X_train_balanced, y_train_balanced = smote.fit_resample(X=X_train_processed,y=y_train_encoded)
+elif dataset == 'CIC':
+    rus = RandomUnderSampler(sampling_strategy="not minority")
+    X_train_balanced, y_train_balanced = rus.fit_resample(X=X_train_processed,y=y_train_encoded)
+
+X_train_balanced_array = X_train_balanced.values if hasattr(X_train_balanced, "values") else X_train_balanced
+
+X_train_processed_array = X_train_balanced_array
 X_test_processed_array = X_test_processed.values
 X_val_processed_array = X_val_processed.values
 
-X_train_seq = X_train_processed_array.reshape(X_train_processed.shape[0], 1, num_features)
-X_test_seq = X_test_processed_array.reshape(X_test_processed.shape[0], 1, num_features)
-X_val_seq = X_val_processed_array.reshape(X_val_processed.shape[0], 1, num_features)
+X_train_seq = X_train_processed_array.reshape(X_train_processed_array.shape[0], 1, num_features)
+X_test_seq = X_test_processed_array.reshape(X_test_processed_array.shape[0], 1, num_features)
+X_val_seq = X_val_processed_array.reshape(X_val_processed_array.shape[0], 1, num_features)
 
 X_train_inputs = {
     "ae_input": X_train_processed_array,
@@ -134,7 +145,7 @@ X_val_inputs = {
     "lstm_input": X_val_seq
 }
 
-
+y_train_balanced_ohe = to_categorical(y_train_balanced, num_classes=num_classes)
 y_train_ohe = to_categorical(y_train_encoded, num_classes=num_classes)
 y_test_ohe = to_categorical(y_test_encoded, num_classes=num_classes)
 y_val_ohe = to_categorical(y_val_encoded, num_classes=num_classes)
@@ -153,12 +164,12 @@ model.compile(
             ],
     },
     loss={
-        "classification": "categorical_crossentropy",
+        "classification": focal_loss(),
         "reconstruction": "mse"
     },
     loss_weights={
         "classification": 1.0,
-        "reconstruction": 0.3,
+        "reconstruction": 0.05,
     }
 )
 
@@ -170,7 +181,7 @@ f1_callback = F1EarlyStopping(
             "reconstruction": X_val_processed
         }
     ),
-    patience=10
+    patience=20
 )
 
 checkpoint = tf.keras.callbacks.ModelCheckpoint(
@@ -192,8 +203,8 @@ print("training model...")
 history = model.fit(
     X_train_inputs,
     {
-        "classification": y_train_ohe,
-        "reconstruction": X_train_processed
+        "classification": y_train_balanced_ohe,
+        "reconstruction": X_train_processed_array
     },
     validation_data=(X_val_inputs, 
         {
@@ -201,13 +212,13 @@ history = model.fit(
             "reconstruction": X_val_processed
         }
     ),
-    epochs=5, #70-100
+    epochs=20, #70-100
     batch_size=64,#128
     callbacks=[f1_callback, checkpoint, reduce_lr],
-    sample_weight={
-        "classification": sample_weights,
-        "reconstruction": np.ones(len(sample_weights))
-    },
+    # sample_weight={
+    #     "classification": sample_weights,
+    #     "reconstruction": np.ones(len(sample_weights))
+    # },
     verbose=1
 )
 
