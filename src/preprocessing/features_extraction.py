@@ -37,11 +37,11 @@ class InteractionFeatures(BaseEstimator, TransformerMixin):
         X_transformed = X.copy()
 
         if {'ct_srv_src', 'ct_state_ttl'}.issubset(X_transformed.columns):
-            X['service_state_interaction'] = (
+            X_transformed['service_state_interaction'] = (
                 X_transformed['ct_srv_src'] * X_transformed['ct_state_ttl']
             )
 
-        return X
+        return X_transformed
 
 class RateFeatures(BaseEstimator, TransformerMixin):
     
@@ -85,8 +85,11 @@ class CICFeatures(BaseEstimator, TransformerMixin):
     def transform(self, X):
         X_transformed = X.copy()
 
+        if "Fwd Seg Size Min" in X_transformed.columns:
+            X_transformed["Fwd Seg Size Min"] = X_transformed["Fwd Seg Size Min"].clip(lower=0)
+
         X_transformed['fwd_packets_per_second'] = (
-            X_transformed['Total Fwd Packets'] / (X_transformed['Flow Duration'] + 1)
+            X_transformed['Total Fwd Packets'] / ((X_transformed['Flow Duration']/1_000_000) + 1e-6)
         )
         
         return X_transformed

@@ -1,0 +1,8 @@
+# Feature Selection
+BorutaShap>=1.0.0
+shap>=0.41.0
+probatus>=1.0.0
+
+# Models (for feature selection)
+lightgbm>=3.3.0
+xgboost>=1.7.0

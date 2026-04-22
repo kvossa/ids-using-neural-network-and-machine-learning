@@ -1,4 +1,6 @@
 models/
 data/
 ids/
+experiment/
 __pycache__/
+*.h5

@@ -1,0 +1,2 @@
+window_size,window_step,focal_gamma,target_min,epochs_run,batch_size
+10,1,2.0,12000,16,128

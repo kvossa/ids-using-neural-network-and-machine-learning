@@ -7,7 +7,7 @@ from sklearn.ensemble import RandomForestClassifier
 
 class FeatureSelector: 
 
-    def __init__(self, k_features=20, random_state=42, use_anova=False, use_mi=True, use_rf=False, use_rfe=False):
+    def __init__(self, k_features=20, random_state=42, use_anova=False, use_mi=False, use_rf=True, use_rfe=False):
         self.k_features = k_features
         self.random_state = random_state
         self.use_anova = use_anova
@@ -21,25 +21,41 @@ class FeatureSelector:
         self.feature_names_ = X.columns.tolist()
         importance_df = pd.DataFrame({"feature": self.feature_names_})
 
+        MAX_SAMPLES = 50_000
+        if len(X) > MAX_SAMPLES:
+            from sklearn.model_selection import StratifiedShuffleSplit
+            sss = StratifiedShuffleSplit(
+                n_splits=1, 
+                test_size=MAX_SAMPLES, 
+                random_state=self.random_state
+            )
+            _, sample_idx = next(sss.split(X, y))
+            X_fit = X.iloc[sample_idx] if hasattr(X, 'iloc') else X[sample_idx]
+            y_fit = y[sample_idx] if isinstance(y, np.ndarray) else np.array(y)[sample_idx]
+            print(f"  [FeatureSelector] Subsampling: {len(X):,} → {MAX_SAMPLES:,} muestras para fit")
+        else:
+            X_fit = X
+            y_fit = y
+
         if self.use_anova:
             f_selector = SelectKBest(score_func=f_classif, k="all")
-            f_selector.fit(X, y)
+            f_selector.fit(X_fit, y_fit)
             importance_df["f_score"] = f_selector.scores_
         
         if self.use_mi:
             mi_selector = SelectKBest(score_func=mutual_info_classif, k="all")
-            mi_selector.fit(X, y)
+            mi_selector.fit(X_fit, y_fit)
             importance_df["mi_score"] = mi_selector.scores_
 
         if self.use_rf:
-            rf = RandomForestClassifier(n_estimators=200, random_state=self.random_state, n_jobs=1)
-            rf.fit(X, y)
+            rf = RandomForestClassifier(n_estimators=100, random_state=self.random_state, n_jobs=1)
+            rf.fit(X_fit, y_fit)
             importance_df["rf_importance"] = rf.feature_importances_
 
         if self.use_rfe:
             estimator = RandomForestClassifier(n_estimators=100, random_state=self.random_state, n_jobs=1)
             rfe = RFE(estimator=estimator, n_features_to_select=self.k_features)            
-            rfe.fit(X, y)
+            rfe.fit(X_fit, y_fit)
             importance_df["rfe_rank"] = rfe.ranking_
         
         score_columns = [col for col in importance_df.columns if col != "feature"]

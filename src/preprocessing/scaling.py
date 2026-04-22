@@ -3,14 +3,6 @@ import numpy as np
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, RobustScaler
 from sklearn.base import BaseEstimator, TransformerMixin
 
-# from sklearn.pipeline import Pipeline
-# eliminar el target column antes del pipeline
-# pipeline = Pipeline([
-#     ('clean', DataCleaner()),
-#     ('features', FeatureEngineer()),
-#     ('normalize', DataNormalizer())
-# ])
-
 # from sklearn.preprocessing import MaxAbsScaler
 
 # from joblib import Parallel, delayed
@@ -18,7 +10,7 @@ from sklearn.base import BaseEstimator, TransformerMixin
 
 
 class DataScaler(BaseEstimator, TransformerMixin):
-	def __init__(self, scaler_type = 'minmax'):
+	def __init__(self, scaler_type = 'robust'):
 		self.scaler_type = scaler_type
 		# self.target_column = target_column
 		# self.scaler = None

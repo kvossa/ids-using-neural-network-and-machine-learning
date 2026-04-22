@@ -1,0 +1,38 @@
+OPCIONES ENCONTRADAS PARA BALANCEAR DATASETS
+
+1. One Sided Selection + SMOTE: Primero se aplican técnicas de sobremuestreo a la minoría para acercar la proporción, 
+                                luego OSS reduce ejemplos mayoritarios redundantes o erróneos
+
+
+2. Random Oversampling: Seleccionar al azar ejemplos minoritarios (con reemplazo) y añadir copias hasta la frecuencia deseada.
+
+3. Random Oversampling y Undersampling: combinación secuencial de duplicar minoría y eliminar mayoría. 
+                                        Busca un balance intermedio, primero corregir en exceso el desequilibrio, luego recortar para reducir ruido/volumen.
+
+
+4. GMF SMOTE: Agrupa el conjunto original usando GMM (EM), luego aplica un filtrado en cada subgrupo para eliminar ejemplos ruidosos o de frontera, 
+              y finalmente genera sintéticos con proporciones dinámicas
+
+5. SPE - ACGAN: aplica ACGAN para sobremuestrear ejemplos de la minoritaria y SPE para submuestrear la mayoritaria 
+                en función de la dificultad. La idea es obtener un conjunto de entrenamiento equilibrado conservando ejemplos críticos 
+
+6. SMOTE + Edited Nearest Neighbour: primeramente SMOTE agranda la minoría creando sintéticos, luego ENN refina el resultado 
+                                     eliminando instancias ruidosas o conflictivas de ambas clases. Busca balancear y limpiar el 
+                                     dataset simultáneamente
+
+7. Random Undersampling + Cluster Centroids: Eliminar aleatoriamente ejemplos mayoritarios hasta alcanzar un cierto ratio.
+                                             Luego aplica K-Means a la mayoría submuestreada. Finalmente agrupa la clase mayoritaria en N clusters, 
+                                             reemplazar cada cluster por su centroide
+
+8. SD Sampling: método de remuestreo que distingue entre muestras “fáciles” y “difíciles” usando la dificultad de instancias (Instance Hardness). 
+                Solo se remuestrean las zonas difíciles, mientras que las zonas fáciles se dejan intactas. 
+                Es una combinación selectiva de SMOTE y K-Means.
+
+9. Cost Sensitive Stacked Autoencoder: Construye un Stacked Autoencoder cuya función de pérdida incorpora mayor penalidad a errores en la clase minoritaria
+
+10. SVUX (Sparce Autoencoder + Unbalanced XGBoost): Transforma el espacio de características mediante un Sparse Autoencoder, 
+                                                    y luego se entrena un XGBoost adaptado a clases desbalanceadas. 
+
+11. LightGBM + Borderline SMOTE: emplear Borderline-SMOTE para generar sintéticos solo a partir de minorías cercanas al límite de decisión, 
+                                 y luego entrenar un modelo LightGBM sobre los datos expandido. LightGBM es un algoritmo de boosting tipo árbol muy rápido 
+                                 y escalable. 

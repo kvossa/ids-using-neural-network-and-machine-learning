@@ -3,7 +3,7 @@ import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
 
 class DataCleaner(BaseEstimator, TransformerMixin):
-	def __init__(self, drop_columns=['flow_id', 'src_ip', 'dst_ip']):
+	def __init__(self, drop_columns=['src_ip', 'dst_ip']):
 		self.drop_columns = drop_columns
 
 	def fit(self, X, y = None):

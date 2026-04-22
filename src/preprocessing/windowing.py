@@ -1,0 +1,68 @@
+import numpy as np
+import pandas as pd
+from typing import Optional, Tuple
+
+class WindowGenerator:
+    def __init__(self, window_size:int=20, step:int=1, min_flow_lenght:int=2, pure_windows_only:bool=False):
+        self.window_size = window_size
+        self.step = step
+        self.min_flow_lenght = min_flow_lenght
+        self.pure_windows_only = pure_windows_only
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X:np.ndarray, y:np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        X = X.values if hasattr(X, "values") else np.array(X)
+        y = y.values if hasattr(y, "values") else np.array(y)
+        y = y.ravel()
+        return self._build_global_windows(X, y)
+
+    def _build_global_windows(self, X:np.ndarray, y:np.ndarray)->Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        n = len(X)
+        ws = self.window_size
+        step = self.step
+        
+        if n<ws:
+            raise ValueError(f"La ventana es más grande que el número de muestras")
+
+        indices = range(0, n - ws + 1, step)
+        n_windows = len(list(indices))
+
+        X_seq_list, X_ae_list, y_out_list = [], [], []
+        windows_skipped = 0
+
+        for start in indices:
+            end = start + ws
+            y_window = y[start:end]
+
+            if self.pure_windows_only and not self._check_window_purity(y_window=y_window):
+                windows_skipped+=1
+                continue
+
+            X_seq_list.append(X[start:end])
+            X_ae_list.append(X[end-1])
+            y_out_list.append(y[end-1])
+
+        if windows_skipped:
+            pct = windows_skipped / ((n - ws) // step + 1) * 100
+            print(f"[WindowBuilder] Ventanas impuras descartadas: {windows_skipped:,} ({pct:.1f}%)")
+            if pct > 40:
+                print(f"CUIDADO Más del 40% descartado")
+
+        return (np.array(X_ae_list, dtype=np.float32), np.array(X_seq_list, dtype=np.float32), np.array(y_out_list))
+
+        # X_seq = np.empty((n_windows, ws, X.shape[1]), dtype=np.float32)
+        # X_ae = np.empty((n_windows, ws, X.shape[1]), dtype=np.float32)
+        # y_out = np.empty(n_windows, dtype=y.dtype)
+
+        # for i, start in enumerate(indices):
+        #     end = start + ws
+        #     X_seq[i] = X[start:end]
+        #     X_ae[i] = X[end-1]
+        #     y_out = y[end-1]
+        
+        # return X_ae, X_seq, y_out
+    
+    def _check_window_purity(self, y_window: np.ndarray)->bool:
+        return len(np.unique(y_window)) == 1
