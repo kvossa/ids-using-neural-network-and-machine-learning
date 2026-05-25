@@ -1,0 +1,4 @@
+feature,n_unique,missing_ratio,rare_ratio_le_5
+proto,133,0.0,8.778012833454763e-06
+service,13,0.0,0.0
+state,9,0.0,3.511205133381905e-05

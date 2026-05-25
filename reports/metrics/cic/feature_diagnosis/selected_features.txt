@@ -1,0 +1,40 @@
+Flow IAT Max
+Init Fwd Win Bytes
+Flow Duration
+Fwd Packets/s
+Flow IAT Mean
+Bwd Packets/s
+fwd_packets_per_second
+Flow Bytes/s
+Flow Packets/s
+Flow IAT Min
+Fwd IAT Max
+Flow IAT Std
+Init Bwd Win Bytes
+Avg Packet Size
+Fwd IAT Total
+Packet Length Std
+Packet Length Mean
+Bwd IAT Max
+Packet Length Variance
+Fwd IAT Mean
+Packet Length Max
+Avg Bwd Segment Size
+Fwd IAT Min
+Bwd Packet Length Max
+Bwd Packets Length Total
+Bwd Packet Length Mean
+Subflow Bwd Bytes
+Idle Max
+Fwd Packets Length Total
+Fwd Packet Length Mean
+Fwd Packet Length Max
+Subflow Fwd Bytes
+Avg Fwd Segment Size
+Bwd IAT Total
+Fwd Seg Size Min
+Fwd IAT Std
+Bwd Packet Length Min
+Bwd IAT Mean
+Packet Length Min
+Fwd Packet Length Min

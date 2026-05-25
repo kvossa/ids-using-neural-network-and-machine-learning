@@ -1,0 +1,67 @@
+{
+  "calibration": "isotonic",
+  "threshold": 0.7499999999999999,
+  "threshold_selection_mode": "max_val_macro_f1",
+  "threshold_selection": {
+    "mode": "max_val_macro_f1",
+    "val_normal_recall": 0.3193121635464115,
+    "val_attack_recall": 0.8798854974177619,
+    "val_macro_f1": 0.6064907310233068,
+    "val_balanced_accuracy": 0.5995988304820867,
+    "val_macro_f1_ceiling": {
+      "val_macro_f1_max": 0.6064907310233068,
+      "val_balanced_accuracy_at_macro_max": 0.5995988304820867,
+      "threshold_at_val_macro_f1_max": 0.7499999999999999,
+      "val_normal_recall_at_macro_max": 0.3193121635464115,
+      "val_attack_recall_at_macro_max": 0.8798854974177619
+    }
+  },
+  "training_config": {
+    "seed": 123,
+    "window_size": 1,
+    "window_step": 1,
+    "normal_weight": 5.0,
+    "attack_weight": 10.0,
+    "focal_gamma": 2.0,
+    "focal_alpha": 0.35,
+    "epochs_initial": 30,
+    "hard_negative_refinement_loops": 0,
+    "hard_negative_epochs": 10,
+    "hard_negative_max_per_class": 50000,
+    "hard_negative_duplicates_fp": 1,
+    "hard_negative_duplicates_fn": 1,
+    "benign_focus_source": "",
+    "benign_focus_match": "exact",
+    "benign_focus_multiplier": 1.0,
+    "benign_focus_initial": {
+      "enabled": false,
+      "source": "",
+      "match_mode": "exact",
+      "multiplier": 1.0,
+      "eligible_count": 0,
+      "boosted_count": 0
+    },
+    "hard_negative_rounds": []
+  },
+  "test": {
+    "accuracy": 0.7688898397016177,
+    "normal_precision": 0.39783325482807347,
+    "normal_recall": 0.3221345596408256,
+    "normal_f1": 0.356004359581143,
+    "attack_precision": 0.8398664459644182,
+    "attack_recall": 0.8793949260908474,
+    "attack_f1": 0.8591762755562227,
+    "macro_f1": 0.6075903175686829,
+    "weighted_f1": 0.7593969634230546
+  },
+  "test_confusion_matrix": [
+    [
+      29561,
+      62205
+    ],
+    [
+      44744,
+      326252
+    ]
+  ]
+}

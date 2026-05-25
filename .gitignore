@@ -2,5 +2,9 @@ models/
 data/
 ids/
 experiment/
+experimento/
 __pycache__/
 *.h5
+AGENTS.md
+.cursor
+.ruff_cache

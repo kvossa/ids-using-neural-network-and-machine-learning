@@ -1,19 +1,28 @@
+import keras
 from keras.models import Model, Sequential
-from keras.layers import Input, Dense, LSTM, Dropout, Conv1D, MaxPooling1D, Flatten, Concatenate, BatchNormalization, LayerNormalization, GlobalAveragePooling1D, Reshape, Lambda
+from keras.layers import Input, Dense, LSTM, Dropout, Conv1D, MaxPooling1D, Flatten, Concatenate, BatchNormalization, LayerNormalization, GlobalAveragePooling1D, Reshape, Layer, AdditiveAttention
 from keras.regularizers import l2
 from keras.metrics import AUC, Precision, Recall, F1Score, FalsePositives
 from tensorflow import stop_gradient
-# import mlflow
-# mlflow.tensorflow.log_model(model, "model")
 
-# from multiprocessing import Pool
-# pool = Pool(processes=4)
 
-# import smtplib
+@keras.saving.register_keras_serializable()
+class StopGradient(Layer):
+    def call(self, x):
+        return stop_gradient(x)
+
+    def get_config(self):
+        return super().get_config()
+
 
 class IDSModelFactory:
 	@staticmethod
-	def create_model(window_size:int=80, num_features:int=80, num_classes:int=15):
+	def create_model(window_size:int=80, num_features:int=80, num_classes:int=15, num_groups:int=None, head_depth:str="standard"):
+		"""
+		Create the hybrid IDS model.
+		
+		head_depth: "shallow" (64→softmax), "standard" (64→softmax), "deep" (128→64→softmax)
+		"""
 		input_dim_ae:int = num_features
 		input_dim_cnn:tuple = (window_size, num_features)
 		input_dim_lstm:tuple = (window_size, num_features)
@@ -24,7 +33,7 @@ class IDSModelFactory:
 		ae_decoded = Dense(48, activation='relu', name='ae_decoder')(ae_bottleneck)
 		ae_output = Dense(input_dim_ae, activation='sigmoid', name='ae_output')(ae_decoded)
 
-		ae_features = Lambda(lambda x: stop_gradient(x))(ae_bottleneck)
+		ae_features = StopGradient(name='ae_features')(ae_bottleneck)
 
 		cnn_input = Input(shape=input_dim_cnn, name='cnn_input')
 		cnn_conv1 = Conv1D(filters=64, kernel_size=3, padding='same', activation='relu', kernel_regularizer=l2(0.0001))(cnn_input)
@@ -51,11 +60,35 @@ class IDSModelFactory:
 			lstm_features
 		])
 
-		dense = Dense(64, activation='relu', kernel_regularizer=l2(0.001))(combined)
-		dense_bn = BatchNormalization()(dense)
-		dense_dropout = Dropout(0.3)(dense_bn)
-
-		output = Dense(num_classes, activation='softmax', name='classification')(dense_dropout)
+		# === CLASSIFICATION HEAD (configurable depth) ===
+		# if head_depth == "attention":
+		# 	# Additive Attention: Query, Key, Value = combined (self-attention)
+		# 	attention = AdditiveAttention(name='self_attention')(combined, combined)
+		# 	attention = Dropout(0.2)(attention)
+		# 	fused = LayerNormalization()(combined + attention)
+			
+		# 	dense = Dense(64, activation='relu', kernel_regularizer=l2(0.001))(fused)
+		# 	dense_bn = BatchNormalization()(dense)
+		# 	dense_dropout = Dropout(0.3)(dense_bn)
+		# 	classification_output = Dense(num_classes, activation='softmax', name='classification')(dense_dropout)
+		# elif head_depth == "deep":
+		# 	dense = Dense(128, activation='relu', kernel_regularizer=l2(0.001))(combined)
+		# 	dense_bn = BatchNormalization()(dense)
+		# 	dense_dropout = Dropout(0.3)(dense_bn)
+		# 	dense2 = Dense(64, activation='relu', kernel_regularizer=l2(0.001))(dense_dropout)
+		# 	dense2_bn = BatchNormalization()(dense2)
+		# 	dense2_dropout = Dropout(0.25)(dense2_bn)
+		# 	classification_output = Dense(num_classes, activation='softmax', name='classification')(dense2_dropout)
+		# elif head_depth == "shallow":
+		# 	dense = Dense(32, activation='relu', kernel_regularizer=l2(0.001))(combined)
+		# 	dense_bn = BatchNormalization()(dense)
+		# 	dense_dropout = Dropout(0.3)(dense_bn)
+		# 	classification_output = Dense(num_classes, activation='softmax', name='classification')(dense_dropout)
+		# else:  # "standard"
+		# 	dense = Dense(64, activation='relu', kernel_regularizer=l2(0.001))(combined)
+		# 	dense_bn = BatchNormalization()(dense)
+		# 	dense_dropout = Dropout(0.3)(dense_bn)
+		# 	classification_output = Dense(num_classes, activation='softmax', name='classification')(dense_dropout)
 
 		model = Model(
 			inputs={
@@ -64,7 +97,7 @@ class IDSModelFactory:
 				'lstm_input': lstm_input
 			},
 			outputs={
-				'classification': output,
+				'classification': classification_output,
 				'reconstruction': ae_output
 			}
 		)

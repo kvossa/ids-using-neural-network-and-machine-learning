@@ -1,0 +1,33 @@
+{
+  "split": "test",
+  "window_size": 1,
+  "window_step": 1,
+  "n_samples_windowed": 462762,
+  "threshold": 0.7499999999999999,
+  "calibration": "isotonic",
+  "accuracy": 0.3944316949101266,
+  "macro_f1": 0.3944097768588669,
+  "normal_recall": 0.9793605474794587,
+  "attack_recall": 0.24974932344284034,
+  "roc_auc_score": 0.687326311031023,
+  "pr_auc_score": 0.8958374898148722,
+  "brier_score": 0.14827432355628842,
+  "ks_score_between_classes": 0.24119693987612634,
+  "benign_monday_support": 91766,
+  "benign_other_support": 0,
+  "benign_monday_fp_rate": 0.020639452520541376,
+  "benign_other_fp_rate": NaN,
+  "benign_fp_total": 1894,
+  "benign_monday_fp_count": 1894,
+  "fp_concentration_ratio": 1.0,
+  "confusion_matrix": [
+    [
+      89872,
+      1894
+    ],
+    [
+      278340,
+      92656
+    ]
+  ]
+}

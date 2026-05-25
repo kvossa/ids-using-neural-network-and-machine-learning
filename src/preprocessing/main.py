@@ -1,9 +1,11 @@
 import joblib
 import pandas as pd
-from src.preprocessing.pipeline import IDSPipeline
-from src.preprocessing.scaling import MultiClassLabelEncoder
+from src.preprocessing.pipeline.pipeline import IDSPipeline
+from src.preprocessing.pipeline.scaling import MultiClassLabelEncoder
 from pathlib import Path
 from sklearn.preprocessing import LabelEncoder
+import json
+from typing import List, Optional
 
 BINARY = True
 NUMBER_FEATURES = 40
@@ -23,6 +25,7 @@ def call(
     dataset: str,
     stratify_column: str,
     selector_type: str = "hybrid",
+    manual_features: Optional[List[str]] = None,
 ) -> set:
     # X = data.drop(stratify_column, axis=1)
     # y = data[stratify_column]
@@ -69,6 +72,7 @@ def call(
         use_feature_selection=use_feature_selection,
         k_features=NUMBER_FEATURES,
         selector_type=selector_type,
+        manual_features=manual_features,
     )
     preprocessing_pipeline.build_pipeline()
 
@@ -96,18 +100,29 @@ def call(
     print("##balance##")
     print(pd.Series(y_train_for_selection).value_counts(normalize=True))
 
-    label_encoder_path = (
-        f"models/preprocessing/binary/{dataset.lower()}/label_encoder.pkl"
+    label_encoder_multi_path = (
+        f"models/preprocessing/multiclass/{dataset.lower()}/label_encoder.pkl"
     )
-    joblib.dump(label_encoder, label_encoder_path)
+    joblib.dump(label_encoder, label_encoder_multi_path)
+    print(f"label encoder (multiclass) saved in {label_encoder_multi_path}")
 
-    print(f"label encoder saved in {label_encoder_path}")
+    binary_encoder_path = f"models/preprocessing/binary/{dataset.lower()}/label_encoder.pkl"
+    Path(binary_encoder_path).parent.mkdir(parents=True, exist_ok=True)
+    binary_label_encoder = LabelEncoder()
+    normal = "BENIGN" if dataset == "CIC" else "Normal"
+    y_binary = (y_train != normal).astype(int)
+    binary_label_encoder.fit(y_binary)
+    joblib.dump(binary_label_encoder, binary_encoder_path)
+    print(f"label encoder (binary) saved in {binary_encoder_path}")
 
-    # multiclass/binary
-    model_path = f"models/preprocessing/binary/{dataset.lower()}/preprocessing.pkl"
-    joblib.dump(preprocessing_pipeline, model_path)
+    model_multi_path = f"models/preprocessing/binary/{dataset.lower()}/preprocessing.pkl"
+    joblib.dump(preprocessing_pipeline, model_multi_path)
+    print(f"preprocessing (multiclass) saved in {model_multi_path}")
 
-    print(f"preprocessing model saved in {model_path}")
+    if selector_type in {"fixed", "manual_fixed", "manual_hybrid"}:
+        pipeline_binary_path = f"models/preprocessing/binary/{dataset.lower()}/preprocessing.pkl"
+        joblib.dump(preprocessing_pipeline, pipeline_binary_path)
+        print(f"preprocessing (binary) saved in {pipeline_binary_path}")
 
     return (
         X_train_processed,
@@ -127,19 +142,49 @@ if __name__ == "__main__":
         "--selector",
         type=str,
         default="hybrid",
-        choices=["hybrid", "boruta", "rfe", "original"],
+        choices=["fixed", "hybrid", "boruta", "rfe", "manual_fixed", "manual_hybrid", "original"],
         help="Feature selector type",
+    )
+    parser.add_argument(
+        "--manual-features",
+        type=str,
+        default="",
+        help="Comma-separated list of manual features to keep (used by manual_* selectors).",
+    )
+    parser.add_argument(
+        "--manual-features-file",
+        type=str,
+        default="",
+        help="Path to JSON/TXT file with manual features (used by manual_* selectors).",
     )
     args = parser.parse_args()
 
     selector_type = args.selector if args.selector != "original" else "original"
 
+    manual_features = None
+    if args.manual_features:
+        manual_features = [f.strip() for f in args.manual_features.split(",") if f.strip()]
+    elif args.manual_features_file:
+        p = Path(args.manual_features_file)
+        if p.suffix.lower() == ".json":
+            manual_features = json.loads(p.read_text())
+        else:
+            manual_features = [ln.strip() for ln in p.read_text().splitlines() if ln.strip()]
+
     # UNSW
-    dataset: str = "UNSW"
-    train_path: Path = Path("data/processed/UNSW-NB15/splits/train.csv")
-    test_path: Path = Path("data/processed/UNSW-NB15/splits/test.csv")
-    val_path: Path = Path("data/processed/UNSW-NB15/splits/validation.csv")
-    stratify_column = "attack_cat"
+    # dataset: str = "UNSW"
+    # train_path: Path = Path("data/processed/UNSW-NB15/splits/train.csv")
+    # test_path: Path = Path("data/processed/UNSW-NB15/splits/test.csv")
+    # val_path: Path = Path("data/processed/UNSW-NB15/splits/validation.csv")
+    # stratify_column = "attack_cat"
+
+    # CIC
+    dataset: str = "CIC"
+    train_path: Path = Path("data/processed/CIC-IDS2017/splits/train/data.parquet")
+    test_path: Path = Path("data/processed/CIC-IDS2017/splits/test/data.parquet")
+    val_path: Path = Path("data/processed/CIC-IDS2017/splits/val/data.parquet")
+    stratify_column = "attack_type"
+
 
     call(
         train_path=train_path,
@@ -148,4 +193,5 @@ if __name__ == "__main__":
         dataset=dataset,
         stratify_column=stratify_column,
         selector_type=selector_type,
+        manual_features=manual_features,
     )

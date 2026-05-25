@@ -1,0 +1,26 @@
+{
+  "split": "val",
+  "window_size": 1,
+  "window_step": 1,
+  "n_samples_windowed": 231381,
+  "threshold": 0.7499999999999999,
+  "calibration": "isotonic",
+  "accuracy": 0.767072490826818,
+  "macro_f1": 0.6098938073612273,
+  "normal_recall": 0.3336311923806203,
+  "attack_recall": 0.874284358861012,
+  "roc_auc_score": 0.7068386841251139,
+  "pr_auc_score": 0.9063014035547383,
+  "brier_score": 0.13760973657116332,
+  "ks_score_between_classes": 0.2597866726395681,
+  "confusion_matrix": [
+    [
+      15308,
+      30575
+    ],
+    [
+      23320,
+      162178
+    ]
+  ]
+}
