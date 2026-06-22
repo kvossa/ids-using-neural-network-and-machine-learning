@@ -65,7 +65,7 @@ THRESHOLD_GRID_STEP = 0.01
 TARGET_MACRO_F1 = 0.75
 # "constrained": dual recall if possible, else Normal floor, else fallbacks.
 # "max_val_macro_f1": pick t that maximizes val macro F1 (current ceiling reference).
-THRESHOLD_SELECTION_MODE = _env_str("IDS_STAGE1_THRESHOLD_MODE", "max_val_macro_f1")
+THRESHOLD_SELECTION_MODE = _env_str("IDS_STAGE1_THRESHOLD_MODE", "constrained")
 
 # Classification loss (binary focal)
 FOCAL_GAMMA = _env_float("IDS_STAGE1_FOCAL_GAMMA", 2.0)
@@ -73,16 +73,17 @@ FOCAL_ALPHA = _env_float("IDS_STAGE1_FOCAL_ALPHA", 0.35)
 
 # Extra train cycles: mine FP/FN on train (vs provisional val threshold), append copies, re-fit.
 # Ceiling baseline uses no refinement loops (hn0).
-HARD_NEGATIVE_REFINEMENT_LOOPS = _env_int("IDS_STAGE1_HN_LOOPS", 0)
-HARD_NEGATIVE_EPOCHS = _env_int("IDS_STAGE1_HN_EPOCHS", 10)
-HARD_NEGATIVE_MAX_PER_CLASS = _env_int("IDS_STAGE1_HN_MAX_PER_CLASS", 50_000)
-HARD_NEGATIVE_DUPLICATES_FP = _env_int("IDS_STAGE1_HN_DUP_FP", 1)
-HARD_NEGATIVE_DUPLICATES_FN = _env_int("IDS_STAGE1_HN_DUP_FN", 1)
+# HARD_NEGATIVE_REFINEMENT_LOOPS = _env_int("IDS_STAGE1_HN_LOOPS", 0)
+# HARD_NEGATIVE_EPOCHS = _env_int("IDS_STAGE1_HN_EPOCHS", 10)
+# HARD_NEGATIVE_MAX_PER_CLASS = _env_int("IDS_STAGE1_HN_MAX_PER_CLASS", 50_000)
+# HARD_NEGATIVE_DUPLICATES_FP = _env_int("IDS_STAGE1_HN_DUP_FP", 1)
+# HARD_NEGATIVE_DUPLICATES_FN = _env_int("IDS_STAGE1_HN_DUP_FN", 1)
 # Optional domain-aware boost for benign samples from a problematic source.
 BENIGN_FOCUS_SOURCE = _env_str("IDS_STAGE1_BENIGN_FOCUS_SOURCE", "")
 BENIGN_FOCUS_MULT = _env_float("IDS_STAGE1_BENIGN_FOCUS_MULT", 1.0)
 BENIGN_FOCUS_MATCH = _env_str("IDS_STAGE1_BENIGN_FOCUS_MATCH", "exact")
 RANDOM_SEED = _env_int("IDS_STAGE1_SEED", 42)
+TRAIN_SUBSAMPLE = _env_float("IDS_TRAIN_SUBSAMPLE", 1.0)
 
 os.environ["PYTHONHASHSEED"] = str(RANDOM_SEED)
 random.seed(RANDOM_SEED)
@@ -367,22 +368,34 @@ train_df = pd.read_parquet("data/processed/CIC-IDS2017/splits/train/data.parquet
 test_df = pd.read_parquet("data/processed/CIC-IDS2017/splits/test/data.parquet")
 val_df = pd.read_parquet("data/processed/CIC-IDS2017/splits/val/data.parquet")
 
-y_train_raw = train_df[LABEL_COLUMN]
-y_test_raw = test_df[LABEL_COLUMN]
-y_val_raw = val_df[LABEL_COLUMN]
+if TRAIN_SUBSAMPLE < 1.0:
+    train_df = train_df.sample(frac=TRAIN_SUBSAMPLE, random_state=RANDOM_SEED)
+    print(f"Subsampled train to {len(train_df)} rows ({TRAIN_SUBSAMPLE:.0%})")
 
+#BINARY LABELS — extract as standalone numpy to free DataFrames
+
+y_train_bin = (train_df[LABEL_COLUMN] != NORMAL_LABEL).astype(int).values
+y_test_bin = (test_df[LABEL_COLUMN] != NORMAL_LABEL).astype(int).values
+y_val_bin = (val_df[LABEL_COLUMN] != NORMAL_LABEL).astype(int).values
+
+train_source = (
+    train_df["source_file"].astype(str).to_numpy()
+    if "source_file" in train_df.columns
+    else np.array(["unknown"] * len(train_df), dtype=object)
+)
+
+# Drop columns from DataFrames
 X_train = train_df.drop(columns=[c for c in DROP_COLUMNS if c in train_df.columns])
 X_test = test_df.drop(columns=[c for c in DROP_COLUMNS if c in test_df.columns])
 X_val = val_df.drop(columns=[c for c in DROP_COLUMNS if c in val_df.columns])
 
-#BINARY LABELS
+# Free original DataFrames — no longer needed
+del train_df, test_df, val_df
+import gc; gc.collect()
 
-y_train_bin = (y_train_raw != NORMAL_LABEL).astype(int).values
-y_test_bin = (y_test_raw != NORMAL_LABEL).astype(int).values
-y_val_bin = (y_val_raw != NORMAL_LABEL).astype(int).values
-
+counts = np.bincount(y_train_bin, minlength=2)
 print("DISTRIBUTION - TRAIN")
-for label, count in zip([0,1], [np.sum(y_train_bin==0), np.sum(y_train_bin==1)]):
+for label, count in [(0, counts[0]), (1, counts[1])]:
     name = "Normal" if label == 0 else "Attack"
     pct = count / len(y_train_bin)*100
     print(f"    {label} ({name}): {count, } ({pct:.1}%)")
@@ -398,6 +411,10 @@ X_val_proc = preprocessor.transform(X_val)
 
 num_features = X_train_proc.shape[1]
 
+# Free raw DataFrames — no longer needed after preprocessing
+del X_train, X_test, X_val
+gc.collect()
+
 #WINDOWING
 print("windowing...")
 
@@ -406,13 +423,11 @@ window_builder = WindowGenerator(window_size=WINDOW_SIZE, step=WINDOW_STEP, pure
 X_train_ae, X_train_seq, y_train_w = window_builder.transform(X_train_proc, y_train_bin)
 X_test_ae, X_test_seq, y_test_w = window_builder.transform(X_test_proc, y_test_bin)
 X_val_ae, X_val_seq, y_val_w = window_builder.transform(X_val_proc, y_val_bin)
-train_source_w = _window_last(
-    train_df["source_file"].astype(str).to_numpy()
-    if "source_file" in train_df.columns
-    else np.array(["unknown"] * len(train_df), dtype=object),
-    WINDOW_SIZE,
-    WINDOW_STEP,
-)
+train_source_w = _window_last(train_source, WINDOW_SIZE, WINDOW_STEP)
+
+# Free intermediate arrays — no longer needed
+del X_train_proc, X_test_proc, X_val_proc, train_source
+gc.collect()
 
 print(f"    Shapes: train={X_train_seq.shape}   |   test={X_test_seq.shape}")
 
@@ -463,70 +478,70 @@ model.fit(
     verbose=1,
 )
 
-for hn_round in range(HARD_NEGATIVE_REFINEMENT_LOOPS):
-    print(f"\n=== hard-negative refinement {hn_round + 1}/{HARD_NEGATIVE_REFINEMENT_LOOPS} ===")
-    best_model = load_model(str(main_ckpt), compile=False)
-    iso_mine, _, val_scores_mine = fit_iso_and_scores(best_model, X_val_ae, X_val_seq, y_val_w)
-    t_mine, sel_mine = select_threshold(
-        y_val_w,
-        val_scores_mine,
-        mode=THRESHOLD_SELECTION_MODE,
-        min_normal_recall=MIN_NORMAL_RECALL_TARGET,
-        min_attack_recall_target=MIN_ATTACK_RECALL_TARGET,
-        min_attack_recall_floor=MIN_ATTACK_RECALL_FLOOR,
-        grid_start=THRESHOLD_GRID_START,
-        grid_end=THRESHOLD_GRID_END,
-        grid_step=THRESHOLD_GRID_STEP,
-    )
-    print(f"  mining threshold (provisional): {t_mine:.4f}  mode={sel_mine['mode']}")
-    X_ae_aug, X_seq_aug, y_aug, src_aug, mine_stats = mine_hard_negatives(
-        best_model, X_train_ae, X_train_seq, y_train_w, train_source_w, iso_mine, t_mine, rng
-    )
-    print(
-        f"  mined FP={mine_stats['fp_train']} (used {mine_stats['fp_used']}), "
-        f"FN={mine_stats['fn_train']} (used {mine_stats['fn_used']}); "
-        f"augmented train size={len(y_aug)}"
-    )
-    round_focus_w, round_focus_stats = build_benign_focus_weights(y_aug, src_aug)
-    if round_focus_stats["enabled"]:
-        print(
-            f"  benign-focus (round): boosted {round_focus_stats['boosted_count']} / "
-            f"{round_focus_stats['eligible_count']} benign windows"
-        )
-    hard_negative_history.append(
-        {
-            "round": hn_round + 1,
-            "mining_threshold": float(t_mine),
-            "mining_threshold_mode": sel_mine["mode"],
-            **mine_stats,
-            "augmented_train_size": int(len(y_aug)),
-            "benign_focus": round_focus_stats,
-        }
-    )
-    if mine_stats["fp_used"] == 0 and mine_stats["fn_used"] == 0:
-        print("  no hard negatives found; skipping refinement fit for this round")
-        continue
-    train_dataset = create_balanced_tf_dataset(
-        X_ae_aug,
-        X_seq_aug,
-        to_categorical(y_aug, num_classes=2),
-        batch_size=BATCH_SIZE,
-        attack_weight=ATTACK_WEIGHT,
-        normal_weight=NORMAL_WEIGHT,
-        shuffle_seed=RANDOM_SEED + hn_round + 1,
-        extra_sample_weight=round_focus_w,
-    )
-    model = load_model(str(main_ckpt), compile=False)
-    compile_model(model)
-    steps_ref = max(1, len(X_ae_aug) // BATCH_SIZE)
-    model.fit(
-        train_dataset,
-        validation_data=val_pack,
-        epochs=HARD_NEGATIVE_EPOCHS,
-        steps_per_epoch=steps_ref,
-        callbacks=[checkpoint, reduce_lr],
-        verbose=1,
-    )
+# for hn_round in range(HARD_NEGATIVE_REFINEMENT_LOOPS):
+#     print(f"\n=== hard-negative refinement {hn_round + 1}/{HARD_NEGATIVE_REFINEMENT_LOOPS} ===")
+#     best_model = load_model(str(main_ckpt), compile=False)
+#     iso_mine, _, val_scores_mine = fit_iso_and_scores(best_model, X_val_ae, X_val_seq, y_val_w)
+#     t_mine, sel_mine = select_threshold(
+#         y_val_w,
+#         val_scores_mine,
+#         mode=THRESHOLD_SELECTION_MODE,
+#         min_normal_recall=MIN_NORMAL_RECALL_TARGET,
+#         min_attack_recall_target=MIN_ATTACK_RECALL_TARGET,
+#         min_attack_recall_floor=MIN_ATTACK_RECALL_FLOOR,
+#         grid_start=THRESHOLD_GRID_START,
+#         grid_end=THRESHOLD_GRID_END,
+#         grid_step=THRESHOLD_GRID_STEP,
+#     )
+#     print(f"  mining threshold (provisional): {t_mine:.4f}  mode={sel_mine['mode']}")
+#     X_ae_aug, X_seq_aug, y_aug, src_aug, mine_stats = mine_hard_negatives(
+#         best_model, X_train_ae, X_train_seq, y_train_w, train_source_w, iso_mine, t_mine, rng
+#     )
+#     print(
+#         f"  mined FP={mine_stats['fp_train']} (used {mine_stats['fp_used']}), "
+#         f"FN={mine_stats['fn_train']} (used {mine_stats['fn_used']}); "
+#         f"augmented train size={len(y_aug)}"
+#     )
+#     round_focus_w, round_focus_stats = build_benign_focus_weights(y_aug, src_aug)
+#     if round_focus_stats["enabled"]:
+#         print(
+#             f"  benign-focus (round): boosted {round_focus_stats['boosted_count']} / "
+#             f"{round_focus_stats['eligible_count']} benign windows"
+#         )
+#     hard_negative_history.append(
+#         {
+#             "round": hn_round + 1,
+#             "mining_threshold": float(t_mine),
+#             "mining_threshold_mode": sel_mine["mode"],
+#             **mine_stats,
+#             "augmented_train_size": int(len(y_aug)),
+#             "benign_focus": round_focus_stats,
+#         }
+#     )
+#     if mine_stats["fp_used"] == 0 and mine_stats["fn_used"] == 0:
+#         print("  no hard negatives found; skipping refinement fit for this round")
+#         continue
+#     train_dataset = create_balanced_tf_dataset(
+#         X_ae_aug,
+#         X_seq_aug,
+#         to_categorical(y_aug, num_classes=2),
+#         batch_size=BATCH_SIZE,
+#         attack_weight=ATTACK_WEIGHT,
+#         normal_weight=NORMAL_WEIGHT,
+#         shuffle_seed=RANDOM_SEED + hn_round + 1,
+#         extra_sample_weight=round_focus_w,
+#     )
+#     model = load_model(str(main_ckpt), compile=False)
+#     compile_model(model)
+#     steps_ref = max(1, len(X_ae_aug) // BATCH_SIZE)
+#     model.fit(
+#         train_dataset,
+#         validation_data=val_pack,
+#         epochs=HARD_NEGATIVE_EPOCHS,
+#         steps_per_epoch=steps_ref,
+#         callbacks=[checkpoint, reduce_lr],
+#         verbose=1,
+#     )
 
 print("\n=== final calibration & threshold ===")
 best_model = load_model(str(main_ckpt), compile=False)
@@ -595,11 +610,11 @@ training_config = {
     "focal_gamma": FOCAL_GAMMA,
     "focal_alpha": FOCAL_ALPHA,
     "epochs_initial": EPOCHS,
-    "hard_negative_refinement_loops": HARD_NEGATIVE_REFINEMENT_LOOPS,
-    "hard_negative_epochs": HARD_NEGATIVE_EPOCHS,
-    "hard_negative_max_per_class": HARD_NEGATIVE_MAX_PER_CLASS,
-    "hard_negative_duplicates_fp": HARD_NEGATIVE_DUPLICATES_FP,
-    "hard_negative_duplicates_fn": HARD_NEGATIVE_DUPLICATES_FN,
+    # "hard_negative_refinement_loops": HARD_NEGATIVE_REFINEMENT_LOOPS,
+    # "hard_negative_epochs": HARD_NEGATIVE_EPOCHS,
+    # "hard_negative_max_per_class": HARD_NEGATIVE_MAX_PER_CLASS,
+    # "hard_negative_duplicates_fp": HARD_NEGATIVE_DUPLICATES_FP,
+    # "hard_negative_duplicates_fn": HARD_NEGATIVE_DUPLICATES_FN,
     "benign_focus_source": BENIGN_FOCUS_SOURCE,
     "benign_focus_match": BENIGN_FOCUS_MATCH,
     "benign_focus_multiplier": BENIGN_FOCUS_MULT,

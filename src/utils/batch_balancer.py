@@ -3,6 +3,8 @@ import tensorflow as tf
 from tensorflow.data import Dataset
 from typing import Optional
 
+DEFAULT_SHUFFLE_BUFFER = 100_000
+
 
 def create_class_balanced_dataset(
     X_ae, X_seq, y_int,
@@ -78,7 +80,7 @@ def create_class_balanced_dataset(
         {"ae_input": X_ae_all, "cnn_input": X_seq_all, "lstm_input": X_seq_all},
         {"classification": y_all_ohe, "reconstruction": X_ae_all},
     ))
-    dataset = dataset.shuffle(n_samples, seed=seed).repeat().batch(batch_size, drop_remainder=True)
+    dataset = dataset.shuffle(min(n_samples, DEFAULT_SHUFFLE_BUFFER), seed=seed).repeat().batch(batch_size, drop_remainder=True)
     
     return dataset, n_samples
 
@@ -289,7 +291,7 @@ def create_smote_oversampled_dataset(
         {"ae_input": X_ae_all, "cnn_input": X_seq_all, "lstm_input": X_seq_all},
         {"classification": y_all_ohe, "reconstruction": X_ae_all},
     ))
-    dataset = dataset.shuffle(n_samples, seed=seed).repeat().batch(batch_size, drop_remainder=True)
+    dataset = dataset.shuffle(min(n_samples, DEFAULT_SHUFFLE_BUFFER), seed=seed).repeat().batch(batch_size, drop_remainder=True)
     
     return dataset, n_samples
 
@@ -426,7 +428,7 @@ def create_balanced_tf_dataset(
         {"classification": y_out, "reconstruction": X_ae},
         sample_weight,
     ))
-    dataset = dataset.shuffle(n_samples, seed=int(shuffle_seed)).repeat().batch(batch_size, drop_remainder=True)
+    dataset = dataset.shuffle(min(n_samples, DEFAULT_SHUFFLE_BUFFER), seed=int(shuffle_seed)).repeat().batch(batch_size, drop_remainder=True)
     return dataset
 
 
@@ -445,7 +447,7 @@ def create_multiclass_tf_dataset(X_ae, X_seq, y_int, y_labels=None, batch_size=1
         {"ae_input": X_ae, "cnn_input": X_seq, "lstm_input": X_seq},
         {"classification": y_labels, "reconstruction": X_ae},
     ))
-    dataset = dataset.shuffle(n_samples, seed=42).repeat().batch(batch_size, drop_remainder=True)
+    dataset = dataset.shuffle(min(n_samples, DEFAULT_SHUFFLE_BUFFER), seed=42).repeat().batch(batch_size, drop_remainder=True)
     return dataset, sample_weights
 
 
@@ -522,7 +524,7 @@ def create_oversampled_dataset(
         {"ae_input": X_ae_all, "cnn_input": X_seq_all, "lstm_input": X_seq_all},
         {"classification": y_all_ohe, "reconstruction": X_ae_all},
     ))
-    dataset = dataset.shuffle(n_samples, seed=seed).repeat().batch(batch_size, drop_remainder=True)
+    dataset = dataset.shuffle(min(n_samples, DEFAULT_SHUFFLE_BUFFER), seed=seed).repeat().batch(batch_size, drop_remainder=True)
     
     return dataset, n_samples
 
@@ -621,7 +623,7 @@ def create_hybrid_mix_dataset(
         {"ae_input": X_ae_all, "cnn_input": X_seq_all, "lstm_input": X_seq_all},
         {"classification": y_all_ohe, "reconstruction": X_ae_all},
     ))
-    dataset = dataset.shuffle(n_samples, seed=seed).repeat().batch(batch_size, drop_remainder=True)
+    dataset = dataset.shuffle(min(n_samples, DEFAULT_SHUFFLE_BUFFER), seed=seed).repeat().batch(batch_size, drop_remainder=True)
     
     return dataset, n_samples
 

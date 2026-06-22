@@ -1,0 +1,70 @@
+feature,recommendation,separability_score,stability_score,missing_ratio,variance,impute_hint,scale_hint,log_hint,encode_hint
+Flow IAT Std,drop,0.124546208242313,0.9982237089475801,0.0,76896658053257.58,none,robust_scale,review_log_transform,numeric
+Fwd Packets/s,drop,0.11824197040857676,0.9986481789157895,0.0,12906916866.76101,none,robust_scale,review_log_transform,numeric
+Fwd IAT Std,drop,0.11781261662361131,0.9985669893873247,0.0,110842418983873.4,none,robust_scale,review_log_transform,numeric
+Flow IAT Mean,drop,0.1138477049313793,0.9984749951687599,0.0,23686860182654.785,none,robust_scale,review_log_transform,numeric
+Flow Packets/s,drop,0.11376093128266673,0.9986620706602036,0.0,15424921006.410688,none,robust_scale,review_log_transform,numeric
+Idle Mean,drop,0.10924671467757574,0.9985676067981875,0.0,664472858382042.1,none,robust_scale,review_log_transform,numeric
+Bwd Packets/s,drop,0.10879556230539533,0.9980891133794786,0.0,907933691.6606541,none,robust_scale,review_log_transform,numeric
+Idle Min,drop,0.1087721097246912,0.9985564934026562,0.0,650853975963486.0,none,robust_scale,review_log_transform,numeric
+Idle Max,drop,0.10788070661778182,0.9985280925029651,0.0,706091438597967.4,none,robust_scale,review_log_transform,numeric
+Fwd IAT Max,drop,0.10220690581595004,0.9984188107802406,0.0,713828811417832.5,none,robust_scale,review_log_transform,numeric
+Fwd IAT Mean,drop,0.10001085133652876,0.9985182139291595,0.0,108376617565821.78,none,robust_scale,review_log_transform,numeric
+Flow Duration,drop,0.0978225521117011,0.9983792964850182,0.0,1325911616455651.0,none,robust_scale,review_log_transform,numeric
+Bwd Packet Length Std,drop,0.09561172581627941,0.9979872405871084,0.0,832393.4753297062,none,robust_scale,review_log_transform,numeric
+Fwd IAT Total,drop,0.09315812604825346,0.9986102081477242,0.0,1321977714316605.8,none,robust_scale,review_log_transform,numeric
+Avg Packet Size,drop,0.08708690919722906,0.9979045075314864,0.0,124407.35724353137,none,robust_scale,review_log_transform,numeric
+Packet Length Max,drop,0.08581070785405776,0.9979582222765544,0.0,4796399.150329764,none,robust_scale,review_log_transform,numeric
+Packet Length Mean,drop,0.08578376039511948,0.9979168557487434,0.0,106300.99069229275,none,robust_scale,review_log_transform,numeric
+Packet Length Variance,drop,0.08492534188404788,0.9980329289909593,0.0,3252699899165.6978,none,robust_scale,review_log_transform,numeric
+Packet Length Std,drop,0.0849253385846831,0.9980329289909593,0.0,465215.4444188625,none,robust_scale,review_log_transform,numeric
+Bwd Packet Length Min,drop,0.08121170944531209,0.9980137892542108,0.0,5384.907053275528,none,robust_scale,review_log_transform,numeric
+Active Max,drop,0.08090551395037981,0.9983620089808584,0.0,1257945287296.5764,none,robust_scale,review_log_transform,numeric
+Active Mean,drop,0.08064249898919562,0.9983601567482698,0.0,497020565175.0296,none,robust_scale,review_log_transform,numeric
+Active Min,drop,0.08032442629994652,0.9984743777578972,0.0,391700129485.3911,none,robust_scale,review_log_transform,numeric
+Bwd IAT Max,drop,0.07267156162171129,0.9984786996339371,0.0,353637890847914.9,none,robust_scale,review_log_transform,numeric
+Bwd Packet Length Mean,drop,0.07210554038264405,0.998674727582892,0.0,424093.5532157463,none,robust_scale,review_log_transform,numeric
+Avg Bwd Segment Size,drop,0.07210554038264405,0.998674727582892,0.0,424093.5532157463,none,robust_scale,review_log_transform,numeric
+Bwd IAT Std,drop,0.07207349805749597,0.9983437953604043,0.0,47479968456138.26,none,robust_scale,review_log_transform,numeric
+Fwd Packet Length Min,drop,0.07115715667515443,0.9986342871713754,0.0,4051.395326032966,none,robust_scale,review_log_transform,numeric
+Flow Bytes/s,drop,0.07076891141583075,0.9989763327893945,0.0,67141341559610.8,none,robust_scale,review_log_transform,numeric
+Bwd IAT Mean,drop,0.07016459377910134,0.9984027580978065,0.0,95614423206298.62,none,robust_scale,review_log_transform,numeric
+Packet Length Min,drop,0.06972520054105591,0.9981965428696146,0.0,701.3215267487051,none,robust_scale,review_log_transform,numeric
+Bwd IAT Total,drop,0.06689284535164464,0.9984015232760809,0.0,982668561458458.0,none,robust_scale,review_log_transform,numeric
+Bwd Packet Length Max,drop,0.06623583768131813,0.9982835978012764,0.0,4434169.556451235,none,robust_scale,review_log_transform,numeric
+Fwd Seg Size Min,drop,0.0633371188918952,0.9989877548903571,0.0,1145932146478.7725,none,robust_scale,review_log_transform,numeric
+Subflow Bwd Bytes,drop,0.05952110101244301,0.9983391647789329,0.0,7043870078676.7,none,robust_scale,review_log_transform,numeric
+Bwd Packets Length Total,drop,0.05952110100285202,0.9983391647789329,0.0,7043983893250.811,none,robust_scale,review_log_transform,numeric
+Protocol,drop,0.05947241637379397,0.9990979627293759,0.0,29.33558074090372,none,robust_scale,review_log_transform,numeric
+Total Fwd Packets,drop,0.056906034994559374,0.9980137892542109,0.0,765901.5937606515,none,robust_scale,review_log_transform,numeric
+Subflow Fwd Packets,drop,0.056906034994559374,0.9980137892542109,0.0,765901.5937606515,none,robust_scale,review_log_transform,numeric
+ACK Flag Count,drop,0.05557009143955227,0.9989683064481774,0.0,0.2048688679893868,none,robust_scale,review_log_transform,numeric
+Bwd IAT Min,drop,0.05329968836569221,0.9987537561733368,0.0,84129247038485.94,none,robust_scale,review_log_transform,numeric
+Fwd Header Length,drop,0.0494806666282559,0.9978952463685437,0.0,78354196683257.08,none,robust_scale,review_log_transform,numeric
+Flow IAT Min,drop,0.043850346340983615,0.9984527683776974,0.0,9888891532910.666,none,robust_scale,review_log_transform,numeric
+Fwd Packet Length Mean,drop,0.0419107809171253,0.9976223507671639,0.0,40888.297830972166,none,robust_scale,review_log_transform,numeric
+Avg Fwd Segment Size,drop,0.0419107809171253,0.9976223507671639,0.0,40888.297830972166,none,robust_scale,review_log_transform,numeric
+Total Backward Packets,drop,0.04168753925082469,0.9983749746089783,0.0,1344506.8310197627,none,robust_scale,review_log_transform,numeric
+Subflow Bwd Packets,drop,0.04168753925082469,0.9983749746089783,0.0,1344506.8310197627,none,robust_scale,review_log_transform,numeric
+Bwd Header Length,drop,0.03807033335352594,0.9980761477513588,0.0,2253311175331.4033,none,robust_scale,review_log_transform,numeric
+Fwd Packet Length Std,drop,0.033813560782995467,0.9971469444027692,0.0,94704.50081727121,none,robust_scale,review_log_transform,numeric
+Fwd Packet Length Max,drop,0.026653709356000754,0.9971160738596268,0.0,616446.4995308563,none,robust_scale,review_log_transform,numeric
+FIN Flag Count,drop,0.02411257783113885,0.9998382383539333,0.0,0.0316485336413817,none,robust_scale,review_log_transform,numeric
+Init Bwd Win Bytes,drop,0.021935245566863326,0.9980934352555186,0.0,77120509.68836372,none,robust_scale,review_log_transform,numeric
+PSH Flag Count,drop,0.019266831850848876,0.999126363629067,0.0,0.19779350851969504,none,robust_scale,review_log_transform,numeric
+Fwd Packets Length Total,drop,0.018215490658535893,0.9975291217268736,0.0,51291053.03385637,none,robust_scale,review_log_transform,numeric
+Subflow Fwd Bytes,drop,0.018215490658535893,0.9975291217268736,0.0,51291053.03385637,none,robust_scale,review_log_transform,numeric
+Fwd Act Data Packets,drop,0.014185601401509373,0.9987874050653621,0.0,558825.7289614452,none,robust_scale,review_log_transform,numeric
+Fwd IAT Min,drop,0.012315078505788613,0.9989812720762972,0.0,89176935655172.88,none,robust_scale,review_log_transform,numeric
+Down/Up Ratio,drop,0.011906414939761412,0.9995678123960048,0.0,0.4964016668628744,none,robust_scale,review_log_transform,numeric
+URG Flag Count,drop,0.011382239238668435,0.9995832476675761,0.0,0.08219804967874556,none,robust_scale,review_log_transform,numeric
+Init Fwd Win Bytes,drop,0.008286135518972393,0.9985114224096682,0.0,219612004.06916985,none,robust_scale,review_log_transform,numeric
+Active Std,drop,0.00812983533781686,0.998573780906816,0.0,186954309565.3147,none,robust_scale,review_log_transform,numeric
+Idle Std,drop,0.004694764609709967,0.9984225152454177,0.0,25918554035532.367,none,robust_scale,review_log_transform,numeric
+Fwd PSH Flags,drop,0.0028720106998596506,0.9998555258580931,0.0,0.03687971675600041,none,robust_scale,review_log_transform,numeric
+SYN Flag Count,drop,0.0028720106998596506,0.9998555258580931,0.0,0.03687971675600041,none,robust_scale,review_log_transform,numeric
+RST Flag Count,drop,0.0001646324097202001,0.9999783906198002,0.0,0.0002938012008124749,none,robust_scale,review_log_transform,numeric
+ECE Flag Count,drop,0.00016228903847403942,0.999979625441526,0.0,0.00029503529521587645,none,robust_scale,review_log_transform,numeric
+Fwd URG Flags,drop,1.1551923972952238e-05,0.9999962955348229,0.0,9.261077173613977e-06,none,robust_scale,review_log_transform,numeric
+CWE Flag Count,drop,1.1551923972952238e-05,0.9999962955348229,0.0,9.261077173613977e-06,none,robust_scale,review_log_transform,numeric
+Flow IAT Max,review,0.11015369656126417,0.9981977776913402,0.0,708969099613095.4,none,robust_scale,review_log_transform,numeric

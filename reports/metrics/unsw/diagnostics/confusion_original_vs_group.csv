@@ -1,0 +1,11 @@
+,Normal,Generic,Exploits,Fuzzers,Recon-Shellcode,Medium
+Analysis,54,0,7,1,0,345
+Backdoor,1,0,5,8,30,332
+DoS,20,3,308,60,86,622
+Exploits,91,10,3743,235,583,823
+Fuzzers,849,0,42,2712,190,399
+Generic,3,1207,128,31,14,137
+Normal,14497,1,68,2158,247,167
+Reconnaissance,31,1,21,23,1581,341
+Shellcode,7,0,16,13,239,16
+Worms,0,0,21,5,2,6

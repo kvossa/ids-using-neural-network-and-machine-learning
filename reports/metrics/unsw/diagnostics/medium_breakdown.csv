@@ -1,0 +1,4 @@
+original_class,count,correct_medium,misclassified,misclass_pct
+Analysis,407,345,62,15.233415233415235
+Backdoor,376,332,44,11.702127659574469
+DoS,1099,622,477,43.403093721565064

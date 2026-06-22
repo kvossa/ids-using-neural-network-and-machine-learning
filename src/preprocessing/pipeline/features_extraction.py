@@ -15,16 +15,16 @@ class RatioFeatures(BaseEstimator, TransformerMixin):
 
         if {'sbytes', 'dbytes'}.issubset(X_transformed.columns):
             X_transformed['bytes_ratio'] = X_transformed['sbytes'] / (X_transformed['dbytes'] + 1)
-            X_transformed['total_bytes'] = X_transformed['sbytes'] + X_transformed['dbytes']
+            # X_transformed['total_bytes'] = X_transformed['sbytes'] + X_transformed['dbytes']
         
         if {'spkts', 'dpkts'}.issubset(X_transformed.columns):
             X_transformed['packets_ratio'] = X_transformed['spkts'] / (X_transformed['dpkts'] + 1)
-            X_transformed['total_packets'] = X_transformed['spkts'] + X_transformed['dpkts']
+            # X_transformed['total_packets'] = X_transformed['spkts'] + X_transformed['dpkts']
 
-        if 'total_bytes' in X_transformed.columns:
-            X_transformed['avg_bytes_per_packet'] = (
-                X_transformed['total_bytes'] / (X_transformed['total_packets'] + 1)
-            )
+        # if 'total_bytes' in X_transformed.columns:
+        #     X_transformed['avg_bytes_per_packet'] = (
+        #         X_transformed['total_bytes'] / (X_transformed['total_packets'] + 1)
+        #     )
 
         return X_transformed
 
@@ -36,10 +36,10 @@ class InteractionFeatures(BaseEstimator, TransformerMixin):
     def transform(self, X):
         X_transformed = X.copy()
 
-        if {'ct_srv_src', 'ct_state_ttl'}.issubset(X_transformed.columns):
-            X_transformed['service_state_interaction'] = (
-                X_transformed['ct_srv_src'] * X_transformed['ct_state_ttl']
-            )
+        # if {'ct_srv_src', 'ct_state_ttl'}.issubset(X_transformed.columns):
+        #     X_transformed['service_state_interaction'] = (
+        #         X_transformed['ct_srv_src'] * X_transformed['ct_state_ttl']
+        #     )
 
         return X_transformed
 
@@ -51,11 +51,11 @@ class RateFeatures(BaseEstimator, TransformerMixin):
     def transform(self, X):
         X_transformed = X.copy()
 
-        if {'sbytes', 'dur'}.issubset(X_transformed.columns):
-            X_transformed['src_bytes_per_second'] = X_transformed['sbytes'] / (X_transformed['dur'] + 0.001)
+        # if {'sbytes', 'dur'}.issubset(X_transformed.columns):
+        #     X_transformed['src_bytes_per_second'] = X_transformed['sbytes'] / (X_transformed['dur'] + 0.001)
 
-        if {'dbytes', 'dur'}.issubset(X_transformed.columns):
-            X_transformed['dst_bytes_per_second'] = X_transformed['dbytes'] / (X_transformed['dur'] + 0.001)
+        # if {'dbytes', 'dur'}.issubset(X_transformed.columns):
+        #     X_transformed['dst_bytes_per_second'] = X_transformed['dbytes'] / (X_transformed['dur'] + 0.001)
 
         if {'spkts', 'dur'}.issubset(X_transformed.columns):
             X_transformed['packets_per_second'] = X_transformed['spkts'] / (X_transformed['dur'] + 0.001)

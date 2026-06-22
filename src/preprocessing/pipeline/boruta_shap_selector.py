@@ -464,10 +464,10 @@ MULTICLASS_FEATURES = [
 ]
 
 ENGINEERED_FEATURES = [
-    "service_state_interaction",
+    # "service_state_interaction",
     "ttl_difference",
-    "src_bytes_per_second",
-    "dst_bytes_per_second",
+    # "src_bytes_per_second",
+    # "dst_bytes_per_second",
     "packets_per_second",
     "dur",
 ]

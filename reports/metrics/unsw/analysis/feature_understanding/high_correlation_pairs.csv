@@ -1,0 +1,13 @@
+feature_a,feature_b,abs_corr
+is_ftp_login,ct_ftp_cmd,0.9993420708188767
+dbytes,dloss,0.9968579096778503
+sbytes,sloss,0.9964898510401025
+dpkts,dloss,0.9811207095056862
+dpkts,dbytes,0.9754886781106562
+swin,dwin,0.9740576171659817
+spkts,sloss,0.9720838753668886
+spkts,sbytes,0.9642615604286934
+sinpkt,is_sm_ips_ports,0.936624019579198
+tcprtt,synack,0.9350887563065463
+ct_srv_src,ct_srv_dst,0.9160354745293809
+tcprtt,ackdat,0.9103101486154349

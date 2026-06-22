@@ -20,10 +20,11 @@ import seaborn as sns
 from src.model.model import IDSModelFactory
 from src.preprocessing.windowing.windowing import WindowGenerator
 from src.utils.batch_balancer import create_hybrid_mix_dataset, create_class_balanced_dataset
+from src.utils.stage1_binary_scoring import apply_stage1_attack_score
 from src.utils.train_stopper import F1EarlyStopping
 from src.grouping.definitions import (
-    UNSW_GROUP_MAP, UNSW_GROUP_NAMES,
-    UNSW_OVERSAMPLE_RATES, UNSW_CLASS_ALPHA,
+    CIC_2GROUP_MAP, CIC_2GROUP_NAMES,
+    CIC_2GROUP_OVERSAMPLE_RATES, CIC_2GROUP_CLASS_ALPHA,
     build_group_mapping,
 )
 
@@ -31,21 +32,20 @@ from src.grouping.definitions import (
 import random
 random.seed(42)
 np.random.seed(42)
+import gc
 
-# Hierarchical grouping config — 9 attack types → 3 groups
-# HighFreq (Exploits+Fuzzers+Generic+Reconnaissance),
-# Medium (DoS+Backdoor), Rare (Analysis+Shellcode+Worms)
-OVERSAMPLE_RATES = UNSW_OVERSAMPLE_RATES
-CLASS_ALPHA = UNSW_CLASS_ALPHA
+# Hierarchical grouping config — 7 attack types → 2 groups
+# FloodBruteforce (DDoS + DoS + Bruteforce), Rare (Botnet+Infiltration+Portscan+WebAttacks)
+OVERSAMPLE_RATES = CIC_2GROUP_OVERSAMPLE_RATES
+CLASS_ALPHA = CIC_2GROUP_CLASS_ALPHA
 
 # JITTER settings
 JITTER_STD = 0.005
 ORIGINAL_MIX_RATIO = 0.7
 
-# Model config
-HEAD_DEPTH = "standard"
-
-WINDOW_SIZE = 10
+# Training config
+HEAD_DEPTH = "attention"
+WINDOW_SIZE = 5
 WINDOW_STEP = 1
 EPOCHS = 50
 BATCH_SIZE = 128
@@ -54,16 +54,29 @@ LEARNING_RATE = 5e-5
 HEAD_LR = 1e-3
 FOCAL_GAMMA = 3.0
 
-DROP_COLUMNS = ["attack_cat", "label", "id"]
-LABEL_COLUMN = "attack_cat"
-NORMAL_LABEL = "Normal"
+# Model architecture config
+MODEL_CONFIG = {
+    "conv_l2": 0.001,
+    "use_first_bn": False,
+    "bn_momentum": 0.9,
+    "rnn_type": "lstm",
+    "rnn_units": 64,
+    "rnn_layers": 2,
+}
+MODEL_TAG = "twogroup"
 
-STAGE1_MODEL = Path("models/classification/two_stage/unsw/stage1/best_model_binary.keras")#.h5??
-STAGE1_THRESHOLD = Path("models/classification/two_stage/unsw/stage1/threshold.json")
+DROP_COLUMNS = ["Label", "attack_label", "attack_type", "source_file"]
+LABEL_COLUMN = "attack_type"
+NORMAL_LABEL = "BENIGN"
 
-REPORTS_PATH = Path("reports/metrics/unsw/two_stage/stage")
-FIGURES_PATH = Path("reports/figures/unsw/two_stage/stage2")
-MODELS_PATH = Path("models/classification/two_stage/unsw/stage2")
+THRESHOLD = 0.3
+STAGE1_DIR = "models/classification/two_stage/cic/stage1"
+STAGE1_MODEL = Path(STAGE1_DIR) / "best_model_binary.keras"
+STAGE1_THRESHOLD = Path(STAGE1_DIR) / "threshold.json"
+
+REPORTS_PATH = Path("reports/metrics/cic/two_stage/stage") / MODEL_TAG
+FIGURES_PATH = Path("reports/figures/cic/two_stage/stage2") / MODEL_TAG
+MODELS_PATH = Path("models/classification/two_stage/cic/stage2") / MODEL_TAG
 
 for p in [REPORTS_PATH, FIGURES_PATH, MODELS_PATH]:
     p.mkdir(parents=True, exist_ok=True)
@@ -71,7 +84,7 @@ for p in [REPORTS_PATH, FIGURES_PATH, MODELS_PATH]:
 #LOAD STAGE 1
 
 print(f"\n{'='*60}")
-print(f"    IDS Stage 2 -  Multiclass Classification")
+print(f"    IDS Stage 2 - 2-Group Diagnostic (FloodBruteforce vs Rare)")
 print(f"\n{'='*60}\n")
 
 print("loading stage 1 model...")
@@ -82,43 +95,35 @@ with open(STAGE1_THRESHOLD) as f:
     threshold_data = json.load(f)
 
 THRESHOLD = threshold_data["threshold"]
-print(f"    Stage 1 threshold: {THRESHOLD}")
+cal_tag = threshold_data.get("calibration", "none")
+print(f"    Stage 1 threshold: {THRESHOLD} (calibration={cal_tag})")
 
 #LOADING
 
 print("loading data...")
 
-train_df = pd.read_csv("data/processed/UNSW-NB15/splits/train.csv")
-test_df = pd.read_csv("data/processed/UNSW-NB15/splits/test.csv")
-val_df = pd.read_csv("data/processed/UNSW-NB15/splits/validation.csv")
+train_df = pd.read_parquet("data/processed/CIC-IDS2017/splits/train/data.parquet")
+test_df = pd.read_parquet("data/processed/CIC-IDS2017/splits/test/data.parquet")
+val_df = pd.read_parquet("data/processed/CIC-IDS2017/splits/val/data.parquet")
 
-y_train_raw = train_df[LABEL_COLUMN]
-y_test_raw = test_df[LABEL_COLUMN]
-y_val_raw = val_df[LABEL_COLUMN]
+#MULTICLASS LABELS — extract before freeing DataFrames
 
-X_train = train_df.drop(columns=[c for c in DROP_COLUMNS if c in train_df.columns])
-X_test = test_df.drop(columns=[c for c in DROP_COLUMNS if c in test_df.columns])
-X_val = val_df.drop(columns=[c for c in DROP_COLUMNS if c in val_df.columns])
+label_encoder = joblib.load("models/preprocessing/multiclass/cic/label_encoder.pkl")
 
-#MULTICLASS LABELS
-
-label_encoder = joblib.load("models/preprocessing/multiclass/unsw/label_encoder.pkl")
-
-y_train_multi = label_encoder.transform(train_df[[LABEL_COLUMN]])
-y_test_multi = label_encoder.transform(test_df[[LABEL_COLUMN]])
-y_val_multi = label_encoder.transform(val_df[[LABEL_COLUMN]])
+y_train_multi = label_encoder.transform(train_df[[LABEL_COLUMN]]).ravel()
+y_test_multi = label_encoder.transform(test_df[[LABEL_COLUMN]]).ravel()
+y_val_multi = label_encoder.transform(val_df[[LABEL_COLUMN]]).ravel()
 
 NUM_CLASSES = len(label_encoder.classes_)
 attack_classes = [c for c in label_encoder.classes_ if c != NORMAL_LABEL]
 
 print(f"NUM_CLASSES: {NUM_CLASSES}")
-
 print(f"Attack classes: {attack_classes}")
 
 # Build group mapping from original class indices → group indices
-GROUP_NAMES = UNSW_GROUP_NAMES
+GROUP_NAMES = CIC_2GROUP_NAMES
 original_to_group = build_group_mapping(
-    label_encoder, UNSW_GROUP_MAP, GROUP_NAMES, NORMAL_LABEL
+    label_encoder, CIC_2GROUP_MAP, GROUP_NAMES, NORMAL_LABEL
 )
 NUM_GROUPS = len(GROUP_NAMES)
 print(f"Groups ({NUM_GROUPS}): {GROUP_NAMES}")
@@ -127,10 +132,24 @@ for cls_name in attack_classes:
     grp_idx = original_to_group[orig_idx]
     print(f"  {cls_name} (idx={orig_idx}) → {GROUP_NAMES[grp_idx]} (idx={grp_idx})")
 
+# Binary labels as standalone numpy
+y_train_bin = (train_df[LABEL_COLUMN] != NORMAL_LABEL).astype(int).values
+y_test_bin = (test_df[LABEL_COLUMN] != NORMAL_LABEL).astype(int).values
+y_val_bin = (val_df[LABEL_COLUMN] != NORMAL_LABEL).astype(int).values
+
+# Drop columns from DataFrames
+X_train = train_df.drop(columns=[c for c in DROP_COLUMNS if c in train_df.columns])
+X_test = test_df.drop(columns=[c for c in DROP_COLUMNS if c in test_df.columns])
+X_val = val_df.drop(columns=[c for c in DROP_COLUMNS if c in val_df.columns])
+
+# Free original DataFrames
+del train_df, test_df, val_df
+gc.collect()
+
 #PREPROCESSING 
 
 print("Preprocessing...")
-preprocessor = joblib.load("models/preprocessing/binary/unsw/preprocessing.pkl")
+preprocessor = joblib.load("models/preprocessing/binary/cic/preprocessing.pkl")
 
 X_train_proc = preprocessor.transform(X_train)
 X_test_proc = preprocessor.transform(X_test)
@@ -138,45 +157,52 @@ X_val_proc = preprocessor.transform(X_val)
 
 num_features = X_train_proc.shape[1]
 
+# Free raw DataFrames
+del X_train, X_test, X_val
+gc.collect()
+
+# ── Pre-windowing ADASYN disabled for CIC (1.6M rows → OOM) ──
+
 #WINDOWING
 print("windowing...")
 
 window_builder = WindowGenerator(window_size=WINDOW_SIZE, step=WINDOW_STEP, pure_windows_only=False)
 
-X_train_ae, X_train_seq, y_train_w = window_builder.transform(X_train_proc, (y_train_raw != NORMAL_LABEL).astype(int))
-X_test_ae, X_test_seq, y_test_w = window_builder.transform(X_test_proc, (y_test_raw != NORMAL_LABEL).astype(int))
-X_val_ae, X_val_seq, y_val_w = window_builder.transform(X_val_proc, (y_val_raw != NORMAL_LABEL).astype(int))
+X_train_ae, X_train_seq, y_train_w = window_builder.transform(X_train_proc, y_train_bin)
+X_test_ae, X_test_seq, y_test_w = window_builder.transform(X_test_proc, y_test_bin)
+X_val_ae, X_val_seq, y_val_w = window_builder.transform(X_val_proc, y_val_bin)
 
 y_train_multi_w = window_builder._build_label_windows(y_train_multi)
 y_val_multi_w = window_builder._build_label_windows(y_val_multi)
 y_test_multi_w = window_builder._build_label_windows(y_test_multi)
 
+# Free intermediate arrays
+del X_train_proc, X_test_proc, X_val_proc, y_train_bin, y_test_bin, y_val_bin
+del y_train_multi, y_test_multi, y_val_multi
+gc.collect()
+
 print(f"    Shapes: train={X_train_seq.shape}   |   test={X_test_seq.shape}")
 
-#FILTER ATTACKS
+#FILTER ATTACKS — chunked to avoid OOM
 
-print("filtering attack samples")
+CHUNK_SIZE = 30000
 
-y_train_probs = stage1_model.predict(
-    {
-        "ae_input": X_train_ae,
-        "cnn_input": X_train_seq,
-        "lstm_input": X_train_seq,
-    },
-    verbose = 0
-)["classification"][:, 1]
+def chunked_predict_and_score(model, ae, seq, dir, threshold_data, chunk_size=CHUNK_SIZE):
+    n = len(ae)
+    scores = np.empty(n, dtype=np.float32)
+    for start in range(0, n, chunk_size):
+        end = min(start + chunk_size, n)
+        chunk = {"ae_input": ae[start:end], "cnn_input": seq[start:end], "lstm_input": seq[start:end]}
+        probs = model.predict(chunk, verbose=0)["classification"][:, 1]
+        scores[start:end] = apply_stage1_attack_score(probs, dir, threshold_data)
+        gc.collect()
+    return scores
 
-y_val_probs = stage1_model.predict(
-    {
-        "ae_input": X_val_ae,
-        "cnn_input": X_val_seq,
-        "lstm_input": X_val_seq,
-    },
-    verbose = 0
-)["classification"][:, 1]
+y_train_scores = chunked_predict_and_score(stage1_model, X_train_ae, X_train_seq, STAGE1_DIR, threshold_data)
+y_val_scores = chunked_predict_and_score(stage1_model, X_val_ae, X_val_seq, STAGE1_DIR, threshold_data)
 
-attack_train_mask = y_train_probs > THRESHOLD
-attack_val_mask = y_val_probs > THRESHOLD
+attack_train_mask = y_train_scores > THRESHOLD
+attack_val_mask = y_val_scores > THRESHOLD
 
 X_train_attack = {
     k: v[attack_train_mask] for k, v in {
@@ -187,7 +213,7 @@ X_train_attack = {
 }
 
 y_train_attack = y_train_multi_w[attack_train_mask]
-# Remap multiclass labels to group indices and filter out Normal (-1)
+# Remap multiclass labels to group indices and filter out BENIGN (-1)
 y_train_attack = original_to_group[y_train_attack]
 train_keep = y_train_attack >= 0
 X_train_attack = {k: v[train_keep] for k, v in X_train_attack.items()}
@@ -211,6 +237,12 @@ y_val_attack = y_val_attack[val_keep]
 print(f"    TRAIN ATTACKS: {sum(attack_train_mask):,} ({sum(attack_train_mask)/len(attack_train_mask)*100:.1f}%)")
 print(f"    VAL ATTACKS: {sum(attack_val_mask):,} ({sum(attack_val_mask)/len(attack_val_mask)*100:.1f}%)")
 
+# Free full-window arrays — only attack subsets needed from now on
+del X_train_ae, X_train_seq, X_val_ae, X_val_seq
+del y_train_w, y_val_w, y_train_multi_w, y_val_multi_w
+del y_train_scores, y_val_scores, attack_train_mask, attack_val_mask
+gc.collect()
+
 #CREATE STAGE 2
 
 print(f"\n building stage 2 model with frozen encoder...")
@@ -230,6 +262,7 @@ full_model = IDSModelFactory.create_model(
     num_features=num_features,
     num_classes=NUM_GROUPS,
     head_depth=HEAD_DEPTH,
+    **MODEL_CONFIG,
 )
 
 full_model.compile(
@@ -283,44 +316,16 @@ train_dataset, n_samples = create_hybrid_mix_dataset(
     X_train_attack["cnn_input"],
     y_train_attack,
     oversample_rates=OVERSAMPLE_RATES,
-    original_ratio=0.75,  # More original data to help normalization
+    original_ratio=ORIGINAL_MIX_RATIO,
     jitter_std=JITTER_STD,
     batch_size=BATCH_SIZE,
 )
 
 steps_per_epoch = n_samples // BATCH_SIZE
 
-steps_per_epoch = n_samples // BATCH_SIZE
-
-print("preparing test data...")
-
-y_test_probs = stage1_model.predict(
-    {
-        "ae_input": X_test_ae,
-        "cnn_input": X_test_seq,
-        "lstm_input": X_test_seq,
-    },
-    verbose = 0
-)["classification"][:, 1]
-
-attack_test_mask = y_test_probs > THRESHOLD
-
-
-X_test_attack = {
-    k: v[attack_test_mask] for k, v in {
-        "ae_input": X_test_ae,
-        "cnn_input": X_test_seq,
-        "lstm_input": X_test_seq,
-    }.items()
-}
-
-y_test_attack = y_test_multi_w[attack_test_mask]
-# Remap test labels to groups and filter out Normal
-y_test_attack = original_to_group[y_test_attack]
-test_keep = y_test_attack >= 0
-X_test_attack = {k: v[test_keep] for k, v in X_test_attack.items()}
-y_test_attack = y_test_attack[test_keep]
-y_test_ohe = to_categorical(y_test_attack, num_classes=NUM_GROUPS)
+# Free training arrays — data is now inside tf.data dataset
+del X_train_attack, y_train_attack
+gc.collect()
 
 history = full_model.fit(
     train_dataset,
@@ -338,20 +343,16 @@ history = full_model.fit(
     verbose=1,
 )
 
+# Free validation arrays (no longer needed after training)
+del X_val_attack, y_val_attack, y_val_ohe
+gc.collect()
+
 # EVALUATION
 
 print("evaluating model...")
 
-y_test_probs = stage1_model.predict(
-    {
-        "ae_input": X_test_ae,
-        "cnn_input": X_test_seq,
-        "lstm_input": X_test_seq,
-    },
-    verbose = 0
-)["classification"][:, 1]
-
-attack_test_mask = y_test_probs > THRESHOLD
+y_test_scores = chunked_predict_and_score(stage1_model, X_test_ae, X_test_seq, STAGE1_DIR, threshold_data)
+attack_test_mask = y_test_scores > THRESHOLD
 
 
 X_test_attack = {
@@ -363,12 +364,16 @@ X_test_attack = {
 }
 
 y_test_attack = y_test_multi_w[attack_test_mask]
-# Remap test labels to groups and filter out Normal
+# Remap test labels to groups and filter out BENIGN
 y_test_attack = original_to_group[y_test_attack]
 test_keep = y_test_attack >= 0
 X_test_attack = {k: v[test_keep] for k, v in X_test_attack.items()}
 y_test_attack = y_test_attack[test_keep]
 y_test_ohe = to_categorical(y_test_attack, num_classes=NUM_GROUPS)
+
+# Free full window arrays (no longer needed)
+del X_test_ae, X_test_seq, y_test_multi_w
+gc.collect()
 
 y_pred_probs = full_model.predict(X_test_attack, verbose=0)["classification"]
 y_pred = np.argmax(y_pred_probs, axis=1)
