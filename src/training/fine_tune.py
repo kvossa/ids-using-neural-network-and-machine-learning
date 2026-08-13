@@ -21,7 +21,7 @@ from keras.callbacks import ReduceLROnPlateau, EarlyStopping
 from keras.metrics import Precision, Recall
 from sklearn.utils.class_weight import compute_class_weight
 
-from src.inference.base import load_model_safe, load_preprocessor
+from src.inference import load_model_safe, load_preprocessor
 from src.preprocessing.windowing.windowing import WindowGenerator
 from src.config import CIC_STAGE1, CIC_STAGE2, FINE_TUNED, FINETUNE_DATA_DIR, UNSW_MODEL
 

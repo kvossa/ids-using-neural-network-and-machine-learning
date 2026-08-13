@@ -3,7 +3,7 @@ import numpy as np
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
-from src.inference.base import BaseInference, load_model_safe
+from ..base import BaseInference, load_model_safe
 from src.grouping.definitions import CIC_BRUTERARE_NAMES
 from src.utils.stage1_binary_scoring import apply_stage1_attack_score
 from src.config import CIC_STAGE1, CIC_STAGE2, PREPROC_PATHS

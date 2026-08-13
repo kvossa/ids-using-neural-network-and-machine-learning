@@ -1,7 +1,7 @@
 import numpy as np
 from typing import Dict, List, Optional, Union
 
-from src.inference.base import BaseInference, load_model_safe
+from ..base import BaseInference, load_model_safe
 from src.grouping.definitions import (
     UNSW_CONFUSION_GROUP_MAP,
     UNSW_CONFUSION_GROUP_NAMES,

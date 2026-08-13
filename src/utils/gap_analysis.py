@@ -3,15 +3,14 @@ import sys
 import warnings
 from pathlib import Path
 
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 import numpy as np
 import pandas as pd
 
 from src.config import DATA_PATHS, PREPROC_PATHS
-
-
-ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
 
 warnings.filterwarnings("ignore")
 import os

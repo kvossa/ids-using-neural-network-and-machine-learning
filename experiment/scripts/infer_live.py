@@ -93,7 +93,7 @@ def main() -> None:
     log_path = str(ROOT / args.log_features) if args.log_features else None
 
     if args.mode == "cic":
-        from src.inference.cic_stream import StreamingCICInference
+        from src.inference import StreamingCICInference
         model_dir = args.model_dir
         if model_dir is not None:
             stage1 = str(ROOT / model_dir / "stage1.keras")
@@ -107,7 +107,7 @@ def main() -> None:
             stage2_path=stage2,
         )
     else:
-        from src.inference.unsw_stream import StreamingUNSWInference
+        from src.inference import StreamingUNSWInference
         model_path = str(ROOT / args.model_dir / "single_stage.keras") if args.model_dir else None
         streamer = StreamingUNSWInference(
             interface=interface,

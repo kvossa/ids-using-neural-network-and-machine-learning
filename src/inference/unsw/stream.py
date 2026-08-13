@@ -10,10 +10,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from src.inference.base import load_preprocessor
-from src.inference.unsw import UNSWInference
-from src.inference.streaming import FlowBuffer, PredictionCSVWriter, FeatureLogger
-from src.inference.unsw_features import (
+from ..base import load_preprocessor
+from .batch import UNSWInference
+from ..streaming import FlowBuffer, PredictionCSVWriter, FeatureLogger
+from .features import (
     UNSWFlow,
     ConnectionStateTable,
     _parse_tshark_line,

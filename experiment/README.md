@@ -14,9 +14,9 @@ Plus: `tcpdump` (root or `CAP_NET_RAW`), `java` if using CICFlowMeter, optional 
 
 1. Copy [`config/lab.example.json`](config/lab.example.json) to `config/lab.json` and edit IPs, capture interface, and artifact paths.
 2. (Optional) Prefer YAML? Copy [`config/lab.example.yaml`](config/lab.example.yaml) to `config/lab.yaml` and install `pyyaml`; [`config_loader.py`](config_loader.py) accepts both formats.
-3. Fill in [`FICHA_LABORATORIO.md`](FICHA_LABORATORIO.md) (or a local, unversioned copy).
+3. Fill in [`LAB_REPORT.local.md`](LAB_REPORT.local.md) (or a local, unversioned copy).
 
-`config/lab.json`, `config/lab.yaml`, and `FICHA_LABORATORIO.local.md` are gitignored — keep internal IPs out of the repo.
+`config/lab.json`, `config/lab.yaml`, and `LAB_REPORT.local.md` are gitignored — keep internal IPs out of the repo.
 
 ## Models and datasets
 
@@ -25,7 +25,7 @@ Artifacts in `lab.json` (`preprocessing_pkl`, `model_keras`) must match the conf
 - **CIC** (`--mode cic`) — two-stage: stage 1 is a binary Normal vs Attack gate (with calibrated threshold `threshold.json`); stage 2 maps flagged windows to Flood/Rare groups. Streaming output includes `stage1_result` / `stage1_confidence` per window.
 - **UNSW** (`--mode unsw`) — single-stage multiclass prediction.
 
-Inference classes live in `src/inference/` (`cic.py`, `unsw.py`, `cic_stream.py`, `unsw_stream.py`) and load default artifact paths from `src/config.py`; fine-tuned heads are supported via `--model-dir` (see below).
+Inference classes live in `src/inference/` (`cic/`, `unsw/` subpackages for batch + streaming, shared `base.py`/`streaming.py`) and load default artifact paths from `src/config.py`; fine-tuned heads are supported via `--model-dir` (see below).
 
 ## Live / streaming inference (primary flow)
 

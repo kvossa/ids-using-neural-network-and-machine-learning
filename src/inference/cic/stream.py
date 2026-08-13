@@ -12,9 +12,9 @@ from src.cicflowmeter.writer import OutputWriter
 from src.cicflowmeter.sniffer import _start_periodic_gc
 from src.cicflowmeter.constants import EXPIRED_UPDATE, PACKETS_PER_GC
 
-from src.inference.base import load_preprocessor
-from src.inference.cic import CICInference
-from src.inference.streaming import FlowBuffer, PredictionCSVWriter, FeatureLogger
+from ..base import load_preprocessor
+from .batch import CICInference
+from ..streaming import FlowBuffer, PredictionCSVWriter, FeatureLogger
 from src.config import CIC_STAGE1, CIC_STAGE2
 
 CIC_COLUMN_MAP = {

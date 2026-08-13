@@ -19,8 +19,7 @@ if str(ROOT / "src") not in sys.path:
     sys.path.insert(0, str(ROOT / "src"))
 
 from experiment.config_loader import load_lab_config
-from src.inference.cic import CICInference
-from src.inference.unsw import UNSWInference
+from src.inference import CICInference, UNSWInference
 
 
 def resolve_path(cwd: Path, p: str) -> Path:

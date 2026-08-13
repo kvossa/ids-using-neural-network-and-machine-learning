@@ -8,5 +8,4 @@ reports/results/
 __pycache__/
 *.h5
 AGENTS.md
-.cursor
-.ruff_cache
+.vscode/
