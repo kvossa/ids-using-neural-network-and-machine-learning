@@ -1,0 +1,5 @@
+# JSON es suficiente para config/lab.json. Opcional para lab.yaml:
+# pyyaml>=6.0
+pandas>=2.0
+numpy>=1.24
+scikit-learn>=1.3

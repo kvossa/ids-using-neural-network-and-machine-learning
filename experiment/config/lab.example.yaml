@@ -1,0 +1,61 @@
+# Copiar a lab.yaml y ajustar. No commitear secretos.
+
+repo_root: "."  # relativo al cwd; usar "." si ejecutáis desde la raíz del repo
+
+network:
+  capture_interface: "eth0"   # interfaz que recibe el mirror o el tráfico de prueba
+  target_host: "192.168.1.10" # servidor objetivo (HTTP, SSH, etc.)
+  benign_url: "http://192.168.1.10/"  # usado por scripts normal/
+
+artifacts:
+  dataset: "CIC"              # CIC | UNSW — debe coincidir con preprocessing y modelo
+  preprocessing_pkl: "models/preprocessing/binary/cic/preprocessing.pkl"
+  model_keras: "models/classification/binary/cic/best_model.keras"
+
+windowing:
+  window_size: 1              # CIC: 1 | UNSW: 10 (alinear con entrenamiento)
+  step: 1
+  pure_windows_only: false
+
+inference:
+  timestamp_column: "Timestamp"  # columna de orden temporal en el CSV de flujos (CICFlowMeter)
+  attack_prob_threshold: 0.5
+  # Columnas no presentes en el entrenamiento (metadatos del orquestador):
+  drop_columns_after_load: ["scenario_id"]
+  benign_labels_ground_truth:
+    - "BENIGN"
+    - "Normal"
+    - "benign"
+
+tcpdump:
+  binary: "tcpdump"
+
+cicflowmeter:
+  enabled: false
+  java_bin: "java"
+  jar_path: "/opt/CICFlowMeter/CICFlowMeter.jar"
+  # Tras procesar un pcap, se buscan CSV en el directorio de salida y se concatenan.
+
+orchestrator:
+  results_dir: "experiment/results"
+  ground_truth_csv: "experiment/results/ground_truth.csv"
+  predictions_csv: "experiment/results/predictions.csv"
+  pcaps_dir: "experiment/results/pcaps"
+  flows_csv: "experiment/results/flows/session_flows.csv"
+  # Escenarios por defecto (lista); podéis acortar o duplicar entradas.
+  scenarios:
+    - id: "warmup_benign_http"
+      label: "BENIGN"
+      duration_sec: 15
+      script: "experiment/scripts/normal/http_benign.sh"
+      capture: true
+    - id: "port_scan_syn"
+      label: "port_scan"
+      duration_sec: 25
+      script: "experiment/scripts/malicious/port_scan.sh"
+      capture: true
+    - id: "cooldown_benign_dns"
+      label: "BENIGN"
+      duration_sec: 15
+      script: "experiment/scripts/normal/dns_loop.sh"
+      capture: true

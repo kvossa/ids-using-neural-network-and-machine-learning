@@ -1,0 +1,66 @@
+{
+  "repo_root": ".",
+  "network": {
+    "capture_interface": "wlp2s0",
+    "target_host": "192.168.1.10",
+    "benign_url": "http://192.168.1.10/"
+  },
+  "artifacts": {
+    "dataset": "CIC",
+    "preprocessing_pkl": "models/preprocessing/binary/cic/preprocessing.pkl",
+    "model_keras": "models/classification/binary/cic/best_model.keras"
+  },
+  "windowing": {
+    "window_size": 1,
+    "step": 1,
+    "pure_windows_only": false
+  },
+  "inference": {
+    "timestamp_column": "Timestamp",
+    "attack_prob_threshold": 0.5,
+    "drop_columns_after_load": ["scenario_id"],
+    "benign_labels_ground_truth": ["BENIGN", "Normal", "benign"]
+  },
+  "tcpdump": {
+    "binary": "tcpdump"
+  },
+  "cicflowmeter": {
+    "enabled": false,
+    "java_bin": "java",
+    "jar_path": "/opt/CICFlowMeter/CICFlowMeter.jar"
+  },
+  "streaming": {
+    "predictions_csv": "results/predictions.csv",
+    "connection_table_window": 1000
+  },
+  "orchestrator": {
+    "results_dir": "experiment/results",
+    "ground_truth_csv": "experiment/results/ground_truth.csv",
+    "predictions_csv": "experiment/results/predictions.csv",
+    "pcaps_dir": "experiment/results/pcaps",
+    "flows_csv": "experiment/results/flows/session_flows.csv",
+    "scenarios": [
+      {
+        "id": "warmup_benign_http",
+        "label": "BENIGN",
+        "duration_sec": 15,
+        "script": "experiment/scripts/normal/http_benign.sh",
+        "capture": true
+      },
+      {
+        "id": "port_scan_syn",
+        "label": "port_scan",
+        "duration_sec": 25,
+        "script": "experiment/scripts/malicious/port_scan.sh",
+        "capture": true
+      },
+      {
+        "id": "cooldown_benign_dns",
+        "label": "BENIGN",
+        "duration_sec": 15,
+        "script": "experiment/scripts/normal/dns_loop.sh",
+        "capture": true
+      }
+    ]
+  }
+}

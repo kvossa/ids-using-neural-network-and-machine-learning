@@ -1,9 +1,7 @@
 models/
 data/
 ids/
-experiment/
 cicflowmeter/
-experimento/
 finetune_data/
 exp_results/
 reports/results/

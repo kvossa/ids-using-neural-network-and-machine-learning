@@ -49,7 +49,7 @@ JITTER_STD = 0.05
 ORIGINAL_MIX_RATIO = 0.7
 
 # Architecture
-HEAD_DEPTH = "attention"            # "standard", "attention", "deep", "shallow"
+HEAD_DEPTH = "attention"            # "standard", "attention"
 ENSEMBLE_MODELS = 1
 
 # Training

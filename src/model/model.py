@@ -19,7 +19,7 @@ class IDSModelFactory:
 	@staticmethod
 	def create_model(
 		window_size=80, num_features=80, num_classes=15,
-		num_groups=None, head_depth="standard",
+		head_depth="standard",
 		conv_l2=0.0001,
 		use_first_bn=True,
 		bn_momentum=0.97,
@@ -78,19 +78,6 @@ class IDSModelFactory:
 			fused = Flatten()(fused)
 			
 			dense = Dense(64, activation='relu', kernel_regularizer=l2(0.001))(fused)
-			dense_bn = BatchNormalization()(dense)
-			dense_dropout = Dropout(0.3)(dense_bn)
-			classification_output = Dense(num_classes, activation='softmax', name='classification')(dense_dropout)
-		elif head_depth == "deep":
-			dense = Dense(128, activation='relu', kernel_regularizer=l2(0.001))(combined)
-			dense_bn = BatchNormalization()(dense)
-			dense_dropout = Dropout(0.3)(dense_bn)
-			dense2 = Dense(64, activation='relu', kernel_regularizer=l2(0.001))(dense_dropout)
-			dense2_bn = BatchNormalization()(dense2)
-			dense2_dropout = Dropout(0.25)(dense2_bn)
-			classification_output = Dense(num_classes, activation='softmax', name='classification')(dense2_dropout)
-		elif head_depth == "shallow":
-			dense = Dense(32, activation='relu', kernel_regularizer=l2(0.001))(combined)
 			dense_bn = BatchNormalization()(dense)
 			dense_dropout = Dropout(0.3)(dense_bn)
 			classification_output = Dense(num_classes, activation='softmax', name='classification')(dense_dropout)
