@@ -23,10 +23,11 @@ from src.utils.batch_balancer import create_hybrid_mix_dataset, create_class_bal
 from src.utils.stage1_binary_scoring import apply_stage1_attack_score
 from src.utils.train_stopper import F1EarlyStopping
 from src.grouping.definitions import (
-    CIC_GROUP_MAP, CIC_GROUP_NAMES,
-    CIC_OVERSAMPLE_RATES, CIC_CLASS_ALPHA,
+    CIC_BRUTERARE_MAP, CIC_BRUTERARE_NAMES,
+    CIC_BRUTERARE_OVERSAMPLE_RATES, CIC_BRUTERARE_CLASS_ALPHA,
     build_group_mapping,
 )
+from src.config import CIC_STAGE1_DIR, CIC_STAGE1, CIC_STAGE1_THRESHOLD, CIC_STAGE2, DATA_PATHS, PREPROC_PATHS, REPORT_PATHS
 
 # Set all random seeds
 import random
@@ -34,10 +35,10 @@ random.seed(42)
 np.random.seed(42)
 import gc
 
-# Hierarchical grouping config — 7 attack types → 3 groups
-# Flood (DDoS + DoS), Bruteforce (standalone), Rare (Botnet+Infiltration+Portscan+WebAttacks)
-OVERSAMPLE_RATES = CIC_OVERSAMPLE_RATES
-CLASS_ALPHA = CIC_CLASS_ALPHA
+# Hierarchical grouping config — 7 attack types → 2 groups
+# Flood (DDoS + DoS), Rare (Bruteforce+Botnet+Infiltration+Portscan+WebAttacks)
+OVERSAMPLE_RATES = CIC_BRUTERARE_OVERSAMPLE_RATES
+CLASS_ALPHA = CIC_BRUTERARE_CLASS_ALPHA
 
 # JITTER settings
 JITTER_STD = 0.005
@@ -54,7 +55,7 @@ LEARNING_RATE = 5e-5
 HEAD_LR = 1e-3
 FOCAL_GAMMA = 3.0
 
-# Model architecture config (toggle between baseline and experiment)
+# Model architecture config
 MODEL_CONFIG = {
     "conv_l2": 0.001,
     "use_first_bn": False,
@@ -63,28 +64,26 @@ MODEL_CONFIG = {
     "rnn_units": 64,
     "rnn_layers": 2,
 }
-MODEL_TAG = "baseline"
 
 DROP_COLUMNS = ["Label", "attack_label", "attack_type", "source_file"]
 LABEL_COLUMN = "attack_type"
 NORMAL_LABEL = "BENIGN"
 
 THRESHOLD = 0.3
-STAGE1_DIR = "models/classification/two_stage/cic/stage1"
-STAGE1_MODEL = Path(STAGE1_DIR) / "best_model_binary.keras"
-STAGE1_THRESHOLD = Path(STAGE1_DIR) / "threshold.json"
+STAGE1_DIR = CIC_STAGE1_DIR
+STAGE1_MODEL = Path(CIC_STAGE1)
+STAGE1_THRESHOLD = Path(CIC_STAGE1_THRESHOLD)
 
-REPORTS_PATH = Path("reports/metrics/cic/two_stage/stage") / MODEL_TAG
-FIGURES_PATH = Path("reports/figures/cic/two_stage/stage2") / MODEL_TAG
-MODELS_PATH = Path("models/classification/two_stage/cic/stage2") / MODEL_TAG
+REPORTS_PATH = Path(REPORT_PATHS["cic_stage2"])
+MODELS_PATH = Path(CIC_STAGE2).parent
 
-for p in [REPORTS_PATH, FIGURES_PATH, MODELS_PATH]:
+for p in [REPORTS_PATH, MODELS_PATH]:
     p.mkdir(parents=True, exist_ok=True)
 
 #LOAD STAGE 1
 
 print(f"\n{'='*60}")
-print(f"    IDS Stage 2 -  Multiclass Classification")
+print(f"    IDS Stage 2 - Bruteforce->Rare Regroup (Flood vs Rare)")
 print(f"\n{'='*60}\n")
 
 print("loading stage 1 model...")
@@ -102,13 +101,13 @@ print(f"    Stage 1 threshold: {THRESHOLD} (calibration={cal_tag})")
 
 print("loading data...")
 
-train_df = pd.read_parquet("data/processed/CIC-IDS2017/splits/train/data.parquet")
-test_df = pd.read_parquet("data/processed/CIC-IDS2017/splits/test/data.parquet")
-val_df = pd.read_parquet("data/processed/CIC-IDS2017/splits/val/data.parquet")
+train_df = pd.read_parquet(DATA_PATHS["cic"]["train"])
+test_df = pd.read_parquet(DATA_PATHS["cic"]["test"])
+val_df = pd.read_parquet(DATA_PATHS["cic"]["val"])
 
 #MULTICLASS LABELS — extract before freeing DataFrames
 
-label_encoder = joblib.load("models/preprocessing/multiclass/cic/label_encoder.pkl")
+label_encoder = joblib.load(PREPROC_PATHS["cic"]["multiclass_encoder"])
 
 y_train_multi = label_encoder.transform(train_df[[LABEL_COLUMN]]).ravel()
 y_test_multi = label_encoder.transform(test_df[[LABEL_COLUMN]]).ravel()
@@ -121,9 +120,9 @@ print(f"NUM_CLASSES: {NUM_CLASSES}")
 print(f"Attack classes: {attack_classes}")
 
 # Build group mapping from original class indices → group indices
-GROUP_NAMES = CIC_GROUP_NAMES
+GROUP_NAMES = CIC_BRUTERARE_NAMES
 original_to_group = build_group_mapping(
-    label_encoder, CIC_GROUP_MAP, GROUP_NAMES, NORMAL_LABEL
+    label_encoder, CIC_BRUTERARE_MAP, GROUP_NAMES, NORMAL_LABEL
 )
 NUM_GROUPS = len(GROUP_NAMES)
 print(f"Groups ({NUM_GROUPS}): {GROUP_NAMES}")
@@ -149,7 +148,7 @@ gc.collect()
 #PREPROCESSING 
 
 print("Preprocessing...")
-preprocessor = joblib.load("models/preprocessing/binary/cic/preprocessing.pkl")
+preprocessor = joblib.load(PREPROC_PATHS["cic"]["binary_preprocessor"])
 
 X_train_proc = preprocessor.transform(X_train)
 X_test_proc = preprocessor.transform(X_test)
@@ -162,7 +161,6 @@ del X_train, X_test, X_val
 gc.collect()
 
 # ── Pre-windowing ADASYN disabled for CIC (1.6M rows → OOM) ──
-# Keep config changes (alpha/oversample) and attention head only.
 
 #WINDOWING
 print("windowing...")
@@ -317,7 +315,7 @@ train_dataset, n_samples = create_hybrid_mix_dataset(
     X_train_attack["cnn_input"],
     y_train_attack,
     oversample_rates=OVERSAMPLE_RATES,
-    original_ratio=0.75,  # More original data to help normalization
+    original_ratio=ORIGINAL_MIX_RATIO,
     jitter_std=JITTER_STD,
     batch_size=BATCH_SIZE,
 )

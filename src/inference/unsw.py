@@ -6,18 +6,19 @@ from src.grouping.definitions import (
     UNSW_CONFUSION_GROUP_MAP,
     UNSW_CONFUSION_GROUP_NAMES,
 )
+from src.config import PREPROC_PATHS, UNSW_MODEL
 
 
 class UNSWInference(BaseInference):
-    PREPROCESSOR_PATH = "models/preprocessing/binary/unsw/preprocessing.pkl"
-    LABEL_ENCODER_PATH = "models/preprocessing/multiclass/unsw/label_encoder.pkl"
+    PREPROCESSOR_PATH = PREPROC_PATHS["unsw"]["binary_preprocessor"]
+    LABEL_ENCODER_PATH = PREPROC_PATHS["unsw"]["multiclass_encoder"]
     WINDOW_SIZE = 10
     DROP_COLUMNS = ["attack_cat", "label", "id"]
     NORMAL_LABEL = "Normal"
 
     def __init__(
         self,
-        model_path: str = "models/classification/single_stage/unsw/confusion_groups/baseline/best_model_multiclass.keras",
+        model_path: str = UNSW_MODEL,
         merge_worms_into_exploits: bool = True,
     ):
         super().__init__()
@@ -61,17 +62,21 @@ class UNSWInference(BaseInference):
             "lstm_input": X_seq,
         }
 
-        probs = self.model.predict(inputs, verbose=0)["classification"]
+        output = self.model.predict(inputs, verbose=0)
+        probs = output["classification"]
+        recon = output["reconstruction"]
         pred_indices = np.argmax(probs, axis=1)
         confidence = np.max(probs, axis=1)
 
         results = []
         for i in range(len(X_ae)):
+            mse = float(np.mean((X_ae[i] - recon[i]) ** 2))
             group_name = self.group_names[pred_indices[i]]
             result = {
                 "prediction": group_name,
                 "confidence": float(confidence[i]),
                 "group": group_name,
+                "reconstruction_mse": mse,
             }
             if return_probabilities:
                 result["probs"] = probs[i].tolist()

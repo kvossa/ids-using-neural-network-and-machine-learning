@@ -6,11 +6,12 @@ from typing import Dict, List, Optional, Union
 from src.inference.base import BaseInference, load_model_safe
 from src.grouping.definitions import CIC_BRUTERARE_NAMES
 from src.utils.stage1_binary_scoring import apply_stage1_attack_score
+from src.config import CIC_STAGE1, CIC_STAGE2, PREPROC_PATHS
 
 
 class CICInference(BaseInference):
-    PREPROCESSOR_PATH = "models/preprocessing/binary/cic/preprocessing.pkl"
-    LABEL_ENCODER_PATH = "models/preprocessing/multiclass/cic/label_encoder.pkl"
+    PREPROCESSOR_PATH = PREPROC_PATHS["cic"]["binary_preprocessor"]
+    LABEL_ENCODER_PATH = PREPROC_PATHS["cic"]["multiclass_encoder"]
     WINDOW_SIZE = 5
     DROP_COLUMNS = ["Label", "attack_label", "attack_type", "source_file"]
     NORMAL_LABEL = "BENIGN"
@@ -19,8 +20,8 @@ class CICInference(BaseInference):
 
     def __init__(
         self,
-        stage1_path: str = "models/classification/two_stage/cic/stage1/best_model_binary.keras",
-        stage2_path: str = "models/classification/two_stage/cic/stage2/bruterare/best_model_multiclass.keras",
+        stage1_path: str = CIC_STAGE1,
+        stage2_path: str = CIC_STAGE2,
     ):
         super().__init__()
 
@@ -66,7 +67,9 @@ class CICInference(BaseInference):
             "lstm_input": X_seq,
         }
 
-        stage1_probs = self.stage1_model.predict(inputs, verbose=0)["classification"]
+        stage1_output = self.stage1_model.predict(inputs, verbose=0)
+        stage1_probs = stage1_output["classification"]
+        stage1_recon = stage1_output["reconstruction"]
         raw_attack = stage1_probs[:, 1]
 
         if self._stage1_dir is not None and self._threshold_data is not None:
@@ -79,40 +82,53 @@ class CICInference(BaseInference):
         stage1_pred = (stage1_scores > self.threshold).astype(int)
         stage1_confidence = np.max(stage1_probs, axis=1)
 
+        attack_idx = np.where(stage1_pred == 1)[0]
+        stage2_probs = None
+        stage2_recon = None
+        if len(attack_idx) > 0:
+            batch_input = {
+                "ae_input": X_ae[attack_idx],
+                "cnn_input": X_seq[attack_idx],
+                "lstm_input": X_seq[attack_idx],
+            }
+            stage2_output = self.stage2_model.predict(batch_input, verbose=0)
+            stage2_probs = stage2_output["classification"]
+            stage2_recon = stage2_output["reconstruction"]
+
         results = []
+        pos = 0
         for i in range(len(X_ae)):
             if stage1_pred[i] == 0:
+                mse = float(np.mean((X_ae[i] - stage1_recon[i]) ** 2))
                 result = {
                     "prediction": self.NORMAL_LABEL,
                     "confidence": float(stage1_confidence[i]),
                     "group": None,
                     "stage1_result": self.NORMAL_LABEL,
                     "stage1_confidence": float(stage1_confidence[i]),
+                    "reconstruction_mse": mse,
                 }
             else:
-                sample_input = {
-                    "ae_input": X_ae[i : i + 1],
-                    "cnn_input": X_seq[i : i + 1],
-                    "lstm_input": X_seq[i : i + 1],
-                }
-                stage2_probs = self.stage2_model.predict(sample_input, verbose=0)[
-                    "classification"
-                ]
-                stage2_idx = int(np.argmax(stage2_probs))
+                sp = stage2_probs[pos]
+                sr = stage2_recon[pos]
+                stage2_idx = int(np.argmax(sp))
                 group_name = self.GROUP_NAMES[stage2_idx]
+                mse = float(np.mean((X_ae[i] - sr) ** 2))
 
                 result = {
                     "prediction": group_name,
-                    "confidence": float(stage2_probs[0, stage2_idx]),
+                    "confidence": float(sp[stage2_idx]),
                     "group": group_name,
                     "stage1_result": "Attack",
                     "stage1_confidence": float(stage1_confidence[i]),
+                    "reconstruction_mse": mse,
                 }
+                pos += 1
 
             if return_probabilities:
                 result["stage1_probs"] = stage1_probs[i].tolist()
                 if stage1_pred[i] == 1:
-                    result["stage2_probs"] = stage2_probs[0].tolist()
+                    result["stage2_probs"] = sp.tolist()
 
             results.append(result)
 

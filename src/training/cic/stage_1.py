@@ -19,6 +19,7 @@ from src.model.model import IDSModelFactory
 from src.preprocessing.windowing.windowing import WindowGenerator
 from src.utils.batch_balancer import create_balanced_tf_dataset
 from src.utils.stage1_binary_scoring import CALIBRATOR_FILENAME
+from src.config import CIC_STAGE1_DIR, DATA_PATHS, PREPROC_PATHS, REPORT_PATHS
 import tensorflow as tf
 
 #CONF
@@ -352,11 +353,10 @@ DROP_COLUMNS = ["Label", "attack_label", "attack_type", "source_file"]
 LABEL_COLUMN = "attack_type"
 NORMAL_LABEL = "BENIGN"
 
-REPORTS_PATH = Path("reports/metrics/cic/two_stage/stage1")
-FIGURES_PATH = Path("reports/figures/cic/two_stage/stage1")
-MODELS_PATH = Path("models/classification/two_stage/cic/stage1")
+REPORTS_PATH = Path(REPORT_PATHS["cic_stage1"])
+MODELS_PATH = Path(CIC_STAGE1_DIR)
 
-for p in [REPORTS_PATH, FIGURES_PATH, MODELS_PATH]:
+for p in [REPORTS_PATH, MODELS_PATH]:
     p.mkdir(parents=True, exist_ok=True)
 
 #LOADING
@@ -364,9 +364,9 @@ print(f"\n{'='*60}")
 print(f"    IDS Stage 1 -  Binary Classification (Normal vs Attack)")
 print(f"\n{'='*60}\n")
 
-train_df = pd.read_parquet("data/processed/CIC-IDS2017/splits/train/data.parquet")
-test_df = pd.read_parquet("data/processed/CIC-IDS2017/splits/test/data.parquet")
-val_df = pd.read_parquet("data/processed/CIC-IDS2017/splits/val/data.parquet")
+train_df = pd.read_parquet(DATA_PATHS["cic"]["train"])
+test_df = pd.read_parquet(DATA_PATHS["cic"]["test"])
+val_df = pd.read_parquet(DATA_PATHS["cic"]["val"])
 
 if TRAIN_SUBSAMPLE < 1.0:
     train_df = train_df.sample(frac=TRAIN_SUBSAMPLE, random_state=RANDOM_SEED)
@@ -403,7 +403,7 @@ for label, count in [(0, counts[0]), (1, counts[1])]:
 #PREPROCESSING
 
 print("Preprocessing...")
-preprocessor = joblib.load("models/preprocessing/binary/cic/preprocessing.pkl")
+preprocessor = joblib.load(PREPROC_PATHS["cic"]["binary_preprocessor"])
 
 X_train_proc = preprocessor.transform(X_train)
 X_test_proc = preprocessor.transform(X_test)

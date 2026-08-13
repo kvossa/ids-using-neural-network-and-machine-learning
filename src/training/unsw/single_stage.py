@@ -28,6 +28,7 @@ from src.grouping.definitions import (
     UNSW_CONFUSION_OVERSAMPLE_RATES, UNSW_CONFUSION_CLASS_ALPHA,
     build_group_mapping,
 )
+from src.config import DATA_PATHS, PREPROC_PATHS, REPORT_PATHS, UNSW_CONFUSION_GROUPS_DIR
 
 import random
 random.seed(42)
@@ -71,7 +72,7 @@ MODEL_CONFIG = {
     "rnn_units": 64,
     "rnn_layers": 2,
 }
-MODEL_TAG = "experiment"
+MODEL_TAG = "baseline"
 
 CLASS_ALPHA = UNSW_CONFUSION_CLASS_ALPHA
 
@@ -79,11 +80,10 @@ DROP_COLUMNS = ["attack_cat", "label", "id"]
 LABEL_COLUMN = "attack_cat"
 NORMAL_LABEL = "Normal"
 
-REPORTS_PATH = Path("reports/metrics/unsw/single_stage/confusion_groups") / MODEL_TAG
-FIGURES_PATH = Path("reports/figures/unsw/single_stage/confusion_groups") / MODEL_TAG
-MODELS_PATH = Path("models/classification/single_stage/unsw/confusion_groups") / MODEL_TAG
+REPORTS_PATH = Path(REPORT_PATHS["unsw_confusion_groups"]) / MODEL_TAG
+MODELS_PATH = Path(UNSW_CONFUSION_GROUPS_DIR) / MODEL_TAG
 
-for p in [REPORTS_PATH, FIGURES_PATH, MODELS_PATH]:
+for p in [REPORTS_PATH, MODELS_PATH]:
     p.mkdir(parents=True, exist_ok=True)
 
 print(f"\n{'='*60}")
@@ -91,9 +91,9 @@ print(f"    UNSW Single-Stage Multiclass Classification")
 print(f"\n{'='*60}\n")
 
 print("loading data...")
-train_df = pd.read_csv("data/processed/UNSW-NB15/splits/train.csv")
-test_df = pd.read_csv("data/processed/UNSW-NB15/splits/test.csv")
-val_df = pd.read_csv("data/processed/UNSW-NB15/splits/validation.csv")
+train_df = pd.read_csv(DATA_PATHS["unsw"]["train"])
+test_df = pd.read_csv(DATA_PATHS["unsw"]["test"])
+val_df = pd.read_csv(DATA_PATHS["unsw"]["val"])
 
 y_train_raw = train_df[LABEL_COLUMN]
 y_test_raw = test_df[LABEL_COLUMN]
@@ -103,7 +103,7 @@ X_train = train_df.drop(columns=[c for c in DROP_COLUMNS if c in train_df.column
 X_test = test_df.drop(columns=[c for c in DROP_COLUMNS if c in test_df.columns])
 X_val = val_df.drop(columns=[c for c in DROP_COLUMNS if c in val_df.columns])
 
-label_encoder = joblib.load("models/preprocessing/multiclass/unsw/label_encoder.pkl")
+label_encoder = joblib.load(PREPROC_PATHS["unsw"]["multiclass_encoder"])
 
 y_train_multi = label_encoder.transform(train_df[[LABEL_COLUMN]])
 y_test_multi = label_encoder.transform(test_df[[LABEL_COLUMN]])
@@ -131,7 +131,7 @@ NUM_GROUPS = len(GROUP_NAMES)
 print(f"Groups ({NUM_GROUPS}): {GROUP_NAMES}")
 
 print("Preprocessing...")
-preprocessor = joblib.load("models/preprocessing/binary/unsw/preprocessing.pkl")
+preprocessor = joblib.load(PREPROC_PATHS["unsw"]["binary_preprocessor"])
 
 X_train_proc = preprocessor.transform(X_train)
 X_test_proc = preprocessor.transform(X_test)

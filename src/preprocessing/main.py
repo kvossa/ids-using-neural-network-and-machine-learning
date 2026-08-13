@@ -6,6 +6,7 @@ from pathlib import Path
 from sklearn.preprocessing import LabelEncoder
 import json
 from typing import List, Optional
+from src.config import DATA_PATHS, PREPROC_PATHS
 
 
 def load_unsw(path: str) -> pd.DataFrame:
@@ -78,13 +79,11 @@ def call(
     print("##balance##")
     print(pd.Series(y_train_for_selection).value_counts(normalize=True))
 
-    label_encoder_multi_path = (
-        f"models/preprocessing/multiclass/{dataset.lower()}/label_encoder.pkl"
-    )
+    label_encoder_multi_path = PREPROC_PATHS[dataset.lower()]["multiclass_encoder"]
     joblib.dump(label_encoder, label_encoder_multi_path)
     print(f"label encoder (multiclass) saved in {label_encoder_multi_path}")
 
-    binary_encoder_path = f"models/preprocessing/binary/{dataset.lower()}/label_encoder.pkl"
+    binary_encoder_path = PREPROC_PATHS[dataset.lower()]["binary_encoder"]
     Path(binary_encoder_path).parent.mkdir(parents=True, exist_ok=True)
     binary_label_encoder = LabelEncoder()
     y_binary = (y_train != normal).astype(int)
@@ -92,7 +91,7 @@ def call(
     joblib.dump(binary_label_encoder, binary_encoder_path)
     print(f"label encoder (binary) saved in {binary_encoder_path}")
 
-    model_path = f"models/preprocessing/binary/{dataset.lower()}/preprocessing.pkl"
+    model_path = PREPROC_PATHS[dataset.lower()]["binary_preprocessor"]
     joblib.dump(preprocessing_pipeline, model_path)
     print(f"preprocessing saved in {model_path}")
 
@@ -108,9 +107,9 @@ def call(
 
 if __name__ == "__main__":
     dataset: str = "CIC"
-    train_path: Path = Path("data/processed/CIC-IDS2017/splits/train/data.parquet")
-    test_path: Path = Path("data/processed/CIC-IDS2017/splits/test/data.parquet")
-    val_path: Path = Path("data/processed/CIC-IDS2017/splits/val/data.parquet")
+    train_path: Path = Path(DATA_PATHS["cic"]["train"])
+    test_path: Path = Path(DATA_PATHS["cic"]["test"])
+    val_path: Path = Path(DATA_PATHS["cic"]["val"])
     stratify_column = "attack_type"
 
     call(

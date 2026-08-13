@@ -2,7 +2,11 @@ models/
 data/
 ids/
 experiment/
+cicflowmeter/
 experimento/
+finetune_data/
+exp_results/
+reports/results/
 __pycache__/
 *.h5
 AGENTS.md
