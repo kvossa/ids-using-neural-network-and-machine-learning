@@ -134,9 +134,22 @@ Key test-set metrics (full reports in `reports/metrics/`):
 
 ## Known issues / Future work
 
+### Known issues
+
 - **Attention classification head is effectively a no-op at inference.** The `AdditiveAttention` layer operates over a sequence of length 1, so it numerically reduces to an identity — the `attention` head only adds `LayerNorm` + `Dropout(0.2)` over the `standard` head. Verified on the deployed models. Either remove it or reshape to attend over the window sequence.
 - **Gap analysis** (`src/utils/gap_analysis.py`) compares training vs real-time feature distributions; results from live sessions are a work in progress.
 - **Lab attack scripts** — `experiment/scripts/malicious/brute_force_ssh.sh` and `dos_hping.sh` are templates that send no traffic yet; there is no SSH-benign script (run manually).
+
+### Future work
+
+1. **Imbalance handling** — explore learning strategies and loss functions that serve as alternatives to traditional resampling.
+2. **Validation methodology** — implement temporal and group-based validation so campaigns, flows, or entities never appear simultaneously in the training, validation, and test splits.
+3. **Autoencoder as anomaly detector** — formally evaluate the autoencoder as an anomaly detector: train it exclusively on benign traffic and calibrate its threshold using ROC-AUC, PR-AUC, Precision, Recall, and F1.
+4. **Inference latency** — optimize the inference pipeline with parallel processing and/or hardware acceleration to reduce latency.
+5. **Domain adaptation & continuous learning** — incorporate domain adaptation and continuous learning so the model adapts to real traffic in the deployment environment.
+6. **Model collapse/saturation** — investigate the cause of model collapse/saturation, particularly the CNN-LSTM layers' behavior in response to traffic bursts.
+7. **Modern dataset** — build a proprietary, up-to-date dataset representative of modern infrastructures, new protocols, and threats.
+8. **Operational evaluation** — conduct a quantitative operational evaluation with repeatable experiments and performance metrics under conditions that more closely resemble a real-world environment.
 
 ## Documentation
 
