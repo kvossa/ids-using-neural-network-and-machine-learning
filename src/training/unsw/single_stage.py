@@ -16,8 +16,7 @@ from sklearn.metrics import classification_report, confusion_matrix
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from imblearn.over_sampling import SMOTE, ADASYN, BorderlineSMOTE
-from imblearn.combine import SMOTETomek
+from imblearn.over_sampling import ADASYN
 
 from src.model.model import IDSModelFactory
 from src.preprocessing.windowing.windowing import WindowGenerator
@@ -40,8 +39,7 @@ MERGE_WORMS_INTO_EXPLOITS = True    # False = 7 groups (Worms standalone)
                                     # True  = 6 groups (Worms→Exploits)
 
 # Resampling before windowing
-RESAMPLE_METHOD = "adasyn"          # "smote", "adasyn", "borderline1", "borderline2", "smotetomek"
-SMOTE_TARGET_RATIO = 0.50           # target = min(count*8, majority * this)
+RESAMPLE_TARGET_RATIO = 0.50        # target = min(count*8, majority * this)
 
 # Post-windowing oversampling (hybrid mix)
 OVERSAMPLE_RATES = UNSW_CONFUSION_OVERSAMPLE_RATES
@@ -139,8 +137,8 @@ X_val_proc = preprocessor.transform(X_val)
 
 num_features = X_train_proc.shape[1]
 
-# ── Pre-windowing resampling (SMOTE / ADASYN / Borderline / SMOTETomek) ──
-print(f"\n applying {RESAMPLE_METHOD.upper()} before windowing...")
+# ── Pre-windowing resampling (ADASYN) ──
+print("\n applying ADASYN before windowing...")
 y_train_group = original_to_group[y_train_multi]
 
 group_counts = np.bincount(y_train_group, minlength=NUM_GROUPS)
@@ -149,30 +147,20 @@ print(f"    Pre-resample distribution:")
 for i in range(NUM_GROUPS):
     print(f"      {GROUP_NAMES[i]:<20s} {group_counts[i]:>6,}")
 
-# Target: boost minority groups to SMOTE_TARGET_RATIO of majority (capped)
+# Target: boost minority groups to RESAMPLE_TARGET_RATIO of majority (capped)
 resample_targets = {}
 for g in range(NUM_GROUPS):
     if group_counts[g] < majority_count * 0.3:
-        target = min(int(group_counts[g] * 8), int(majority_count * SMOTE_TARGET_RATIO))
+        target = min(int(group_counts[g] * 8), int(majority_count * RESAMPLE_TARGET_RATIO))
         resample_targets[g] = target
 
 if resample_targets:
     k = min(5, min(group_counts[g] for g in resample_targets) - 1)
     k = max(1, k)
 
-    if RESAMPLE_METHOD == "adasyn":
-        sampler = ADASYN(sampling_strategy=resample_targets, n_neighbors=k, random_state=42)
-    elif RESAMPLE_METHOD == "borderline1":
-        sampler = BorderlineSMOTE(sampling_strategy=resample_targets, k_neighbors=k, kind="borderline-1", random_state=42)
-    elif RESAMPLE_METHOD == "borderline2":
-        sampler = BorderlineSMOTE(sampling_strategy=resample_targets, k_neighbors=k, kind="borderline-2", random_state=42)
-    elif RESAMPLE_METHOD == "smotetomek":
-        sampler = SMOTETomek(sampling_strategy=resample_targets, random_state=42)
-    else:
-        sampler = SMOTE(sampling_strategy=resample_targets, k_neighbors=k, random_state=42)
-
+    sampler = ADASYN(sampling_strategy=resample_targets, n_neighbors=k, random_state=42)
     X_train_proc, y_train_group = sampler.fit_resample(X_train_proc, y_train_group)
-    print(f"\n    {RESAMPLE_METHOD.upper()} augmented: {len(X_train_proc):,} rows (from {group_counts.sum():,})")
+    print(f"\n    ADASYN augmented: {len(X_train_proc):,} rows (from {group_counts.sum():,})")
     for i in range(NUM_GROUPS):
         cnt = int((y_train_group == i).sum())
         print(f"      {GROUP_NAMES[i]:<20s} {cnt:>6,}")

@@ -7,7 +7,7 @@ An Intrusion Detection System (IDS) for network traffic classification built on 
 - **Hybrid architecture** — CNN (spatial) + LSTM (temporal) branches fused with an autoencoder bottleneck; outputs both classification and reconstruction (anomaly signal).
 - **Two-stage CIC pipeline** — stage 1 binary gate with calibrated threshold (`threshold.json`); stage 2 maps the 7 attack classes to Flood/Rare groups.
 - **Single-stage UNSW pipeline** — confusion-based grouping of the 10 UNSW classes (7 groups), including Normal.
-- **Class imbalance handling** — binary focal loss + balanced datasets; multiclass SMOTE/oversampling + categorical focal loss with adaptive alpha; class weights for fine-tuning.
+- **Class imbalance handling** — binary focal loss + balanced datasets; multiclass ADASYN resampling + hybrid oversampling + categorical focal loss with adaptive alpha; class weights for fine-tuning.
 - **Threshold calibration** — calibrated stage-1 attack threshold saved alongside the model.
 - **Batch and live inference** — flow CSVs (`infer_batch.py`) or streaming from an interface (`infer_live.py`).
 - **Fine-tuning** on labeled real traffic per dataset/head.
@@ -91,7 +91,7 @@ Exports to `models/preprocessing/{binary,multiclass}/{cic,unsw}/`.
 ```bash
 python src/training/cic/stage_1.py      # CIC stage 1 — binary Normal vs Attack + threshold calibration
 python src/training/cic/stage_2.py      # CIC stage 2 — Flood vs Rare grouping
-python src/training/unsw/single_stage.py  # UNSW single-stage multiclass (SMOTE + focal loss)
+python src/training/unsw/single_stage.py  # UNSW single-stage multiclass (ADASYN resampling + focal loss)
 python -m src.training.fine_tune --dataset {CIC,UNSW}  # fine-tune heads on labeled real traffic
 ```
 
